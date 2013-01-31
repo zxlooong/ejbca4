@@ -1,0 +1,929 @@
+<project name="ejbca" default="build" basedir=".">
+
+	<!-- Import build specific info, like version number -->
+    <property file="src/internal.properties" />
+	
+	<dirname property="ejbca.home" file="${ant.file.ejbca}"/>
+    <property environment="env" />
+	
+    <!-- set global properties for this build -->
+    <property name="tmp" value="${ejbca.home}/tmp" />
+    <property name="lib" value="${ejbca.home}/lib" />
+    
+    <property name="dist.dir" location="${ejbca.home}/dist" />
+    <property name="va-dist.dir" location="${ejbca.home}/va-dist" />
+	
+    <property name="hwtoken_classes" value="hwtoken"/>
+    <property name="hwtoken.class.dir" location="${hwtoken_classes}" />
+    <property name="apidoc" value="${ejbca.home}/doc/api" />
+
+    <property name="doc.src" value="${tmp}/htdocs" />
+	
+	<!-- include the standard properties and paths -->
+    <import file="propertyDefaults.xml"/>
+
+	<import file="bin/${appserver.type}.xml" optional="true"/><!-- We might just want to build the clientToolBox with an appserver. -->
+	<import file="./test.xmli" />
+	<import file="./docs.xmli" />
+
+	<!-- this import is only used by the plugin scheme-->
+    <import file="${ejbca.home}/modules/build-properties.xml"/>
+	
+    <!-- =================================================================== -->
+    <!-- Clean ALL                                                           -->
+    <!-- =================================================================== -->
+    <target name="clean">
+        <delete dir="${dist.dir}" />
+        <delete dir="${va-dist.dir}" />
+        <delete dir="${apidoc}" />
+        <delete dir="${tmp}"/>
+        <delete file="velocity.log" />
+        <ant antfile="modules/build.xml" target="clean" inheritall="false"><property name="runoncesetup.hasrun" value="true"/></ant>
+    </target>
+	
+    <!-- =================================================================== -->
+    <!-- Build ALL                                                           -->
+    <!-- =================================================================== -->
+    <target name="build" depends="fail-unless-appserver-detected, testforgnujava, ejbca.ear" description="Builds EJBCA"/>
+
+	<!--
+	  EJBCA need to be run before the app.server (or the webapp) is fully ssl configured with the keystore
+	  So we are 'bootstrapping' it, the 'j2ee.web-noconfigure' property will skip all the serverside
+	  -->
+    <target name="bootstrap" depends="testforgnujava" description="Bootstrap EJBCA application">
+        <ant target="deploy">
+        	<property name="j2ee.web-noconfigure" value="true"/>
+        </ant>
+    </target>
+
+	<!--
+	  Installs EJBCA by creating an initial CA, configuring the web container and generating certs for
+	  SSL and the super administrator.
+	  -->
+    <target name="install" depends="fail-unless-appserver-detected, ejbca-ejb-cli" description="Install EJBCA application (only once)">
+        <ant dir="${ejbca.home}/bin" antfile="cli.xml" target="ejbca:install" />
+    </target>
+	
+    <target name="javatruststore" depends="testforgnujava" description="Install RootCA certificate in Java trust store (can be run wih -Dca.name=FooCA -Dtrust.keystore=trust.jks -Dtrust.password=foo123)">
+        <ant dir="${ejbca.home}/bin" antfile="cli.xml" target="ejbca:javatruststore" />
+        <antcall target="j2ee:deploytruststore" />
+    </target>
+
+    <!-- =================================================================== -->
+	<!-- Make sure the user isn't using the GNU version of java              -->
+    <!-- =================================================================== -->
+	<target name="testforgnujava">
+		<exec executable="java" outputproperty="testforgnujava.temp">
+			<arg value="-version" />
+		</exec>
+
+		<fail>
+			<condition>
+				<contains string="${testforgnujava.temp}" substring="gij" />
+			</condition>
+			..
+			You are currently using the GNU version of JAVA. Please install the version from Sun
+			or make sure that the Sun version of java is in the path. If this was run using 'sudo'
+			or 'su', make sure that the superuser has the correct path too.
+		</fail>
+	</target>
+	
+    <!-- =================================================================== -->
+	<!-- Dont allow deploy of the wrong thing in production                   -->
+    <!-- =================================================================== -->
+    <target name="failinproduction-ca">
+		<fail message="You cannot deploy EJBCA as a CA reponder in a OCSP production environment.">
+			<condition>
+				<equals arg1="${ejbca.productionmode}" arg2="va" casesensitive="false"/>
+			</condition>
+		</fail>
+    </target>
+
+    <target name="failinproduction-va">
+		<fail message="You cannot deploy EJBCA as a OCSP Responder in a CA production environment.">
+			<condition>
+				<equals arg1="${ejbca.productionmode}" arg2="ca" casesensitive="false"/>
+			</condition>
+		</fail>
+    </target>
+
+    <!-- =================================================================== -->
+    <!-- Build ca ejb part                                                    -->
+    <!-- =================================================================== -->
+    <target name="ejbca-ejb.jar">
+    	<ant antfile="build.xml" dir="modules" target="ejbca-ejb" />
+    </target>
+	
+    <!-- =================================================================== -->
+    <!-- Build ejbca util part                                                    -->
+    <!-- =================================================================== -->
+    <target name="ejbca-util.jar" description="Creates ejbca util classes for use in other projects.jar">
+        <ant antfile="build.xml" dir="modules" target="ejbca-util" />
+    </target>    	
+
+    <!-- =================================================================== -->
+    <!-- Build va ejb part                                                    -->
+    <!-- =================================================================== -->
+    <target name="va-jar">
+    	<ant antfile="build.xml" dir="modules" target="va-ejb" />
+    </target>
+
+	<macrodef name="jar-replacement-in-module" description="Optionally enable and configure a EJB module in the EAR">
+		<attribute name="replacement-tag"/>
+		<attribute name="replacement-file"/>
+		<attribute name="replacement-enabled"/>
+		<attribute name="replacement-ejb"/>
+		<sequential>
+			<condition property="replacement-string-@{replacement-ejb}" else="@{replacement-tag}" value="module>&lt;ejb>@{replacement-ejb}&lt;/ejb>&lt;/module>">
+				<istrue value="@{replacement-enabled}"/>
+			</condition>
+			<replace file="@{replacement-file}" token="@{replacement-tag}" value="${replacement-string-@{replacement-ejb}}"/>
+            <condition property="didwhat-@{replacement-ejb}" else="Disabled" value="Enabled">
+                <istrue value="@{replacement-enabled}"/>
+            </condition>
+		    <echo message="${didwhat-@{replacement-ejb}} module @{replacement-ejb}"/>
+		</sequential>
+	</macrodef>
+	<macrodef name="war-replacement-in-module" description="Optionally enable and configure a WAR module in the EAR">
+		<attribute name="replacement-tag"/>
+		<attribute name="replacement-file"/>
+		<attribute name="replacement-enabled"/>
+		<attribute name="replacement-web-uri"/>
+		<attribute name="replacement-context-root"/>
+		<sequential>
+			<condition property="replacement-string-@{replacement-web-uri}" else="@{replacement-tag}" value="module>&lt;web>&lt;web-uri>@{replacement-web-uri}&lt;/web-uri>&lt;context-root>@{replacement-context-root}&lt;/context-root>&lt;/web>&lt;/module>">
+				<istrue value="@{replacement-enabled}"/>
+			</condition>
+			<condition property="replacement-echo-@{replacement-web-uri}" value="true">
+				<istrue value="@{replacement-enabled}"/>
+			</condition>
+			<replace file="@{replacement-file}" token="@{replacement-tag}" value="${replacement-string-@{replacement-web-uri}}"/>
+            <condition property="didwhat-@{replacement-web-uri}" else="Disabled" value="Enabled">
+                <istrue value="@{replacement-enabled}"/>
+            </condition>
+            <echo message="${didwhat-@{replacement-web-uri}} module @{replacement-web-uri}"/>
+		</sequential>
+	</macrodef>
+
+    <target name="build-one-plugin">
+        <echo message="Processing plugin file: '${ejbca.plugin.property.file}'"/>
+        <property file="${ejbca.plugin.property.file}"/>
+        <fail message="File '${ejbca.plugin.property.file}' lacks a property setting for 'plugin.ejbca.ant.file'!">
+            <condition>
+                <not>
+                    <isset property="plugin.ejbca.ant.file"/>
+                </not>
+            </condition>
+        </fail>
+        <path id="ejbca.plugin.classpath">
+            <fileset dir="${lib}">
+                <include name="*.jar"/>
+            </fileset>
+            <fileset dir="${ejbca.home}/modules/dist">
+                <include name="*.jar"/>
+            </fileset>
+            <fileset dir="${dist.dir}">
+                <include name="*.jar"/>
+            </fileset>
+            <path refid="lib.ejbca-common-web.classpath"/>
+            <path refid="lib.log4j.classpath"/>
+            <path refid="lib.servlet.classpath"/>
+            <path refid="lib.commons-lang.classpath"/>
+            <path refid="lib.commons-fileupload.classpath"/>
+            <path refid="lib.jee.classpath"/>
+            <path refid="lib.bouncycastle.classpath"/>
+            <path refid="lib.ldap.classpath"/>
+        </path>
+    	<delete dir="${ejbca.plugin.tmp.path}"/>
+    	<mkdir dir="${ejbca.plugin.tmp.path}"/>
+	    <script language="javascript"> <![CDATA[
+	        var antcall = project.createTask ("ant");
+
+	        // The minimum configuration: a path to an "ant" build file
+	        antcall.setAntfile (project.getProperty ("plugin.ejbca.ant.file"));
+
+	        // Check for possible non-default "ant" target
+	        var build_target = project.getProperty ("plugin.ejbca.ant.target");
+	        if (build_target != null) {
+	            antcall.setTarget (build_target);
+	        }
+
+	        // Check for possible custom properties
+			var properties = project.getProperties ();
+		    var keys = properties.keys ();
+		    while (keys.hasMoreElements ()) {
+	        var key = keys.nextElement ();
+		        if (key.startsWith ("plugin.ejbca.ant.custom.")) {
+		            var custom_prop = antcall.createProperty ();
+		            custom_prop.setName (key);
+		            custom_prop.setValue (properties.get (key));
+		        }
+		    }
+	    	
+            // The class-path to it all
+		    var myref = new org.apache.tools.ant.taskdefs.Ant.Reference ();
+		    myref.setRefId ("ejbca.plugin.classpath");
+	        var prop = antcall.createProperty ();
+	        prop.setName ("ejbca.classpath");
+	        prop.setRefid (myref);
+
+           // The full path to "application.xml"
+	        prop = antcall.createProperty ();
+	        prop.setName ("ejbca.app.xml");
+	        prop.setValue (project.getProperty ("eardd.src") + "/META-INF/application.xml");
+
+			// The database type in case the plugin wants to extend etc.
+	    	prop = antcall.createProperty ();
+		    prop.setName ("ejbca.dbtype");
+		    prop.setValue (project.getProperty ("database.name"));
+	    	
+			// The datasource for using with persistence.xml (hibernate)
+	    	prop = antcall.createProperty ();
+		    prop.setName ("ejbca.datasource");
+		    prop.setValue (project.getProperty ("datasource.jndi-name-prefix") + project.getProperty ("datasource.jndi-name"));
+
+			// The hibernate dialect in case the plugin wants to use hibernate.
+			prop = antcall.createProperty ();
+		    prop.setName ("ejbca.hibernate");
+		    prop.setValue (project.getProperty ("hibernate.dialect"));
+
+			// The path to generate code to
+			prop = antcall.createProperty ();
+		    prop.setName ("ejbca.gen.path");
+		    prop.setValue (project.getProperty ("ejbca.plugin.gen.path"));
+
+	    	// A path to use as you like
+			prop = antcall.createProperty ();
+		    prop.setName ("ejbca.tmp.path");
+		    prop.setValue (project.getProperty ("ejbca.plugin.tmp.path"));
+
+			// The path to the EJBCA install directory
+			prop = antcall.createProperty ();
+		    prop.setName ("ejbca.home");
+    		prop.setValue (project.getProperty ("ejbca.home"));
+
+
+	    	// Remove all properties the plugin doesn't need...
+			antcall.setInheritAll (false);
+	        antcall.setInheritRefs (false);
+		    antcall.perform ();
+	]]> </script>
+    </target>
+
+    <target name="plugin-bootstrap-build" if="ejbca.plugin.collection">
+	    <!-- Called once immediately before "ejbca.ear" creation if there are any plugins to build -->
+		<echo message="Plugins found!"/>
+    	<mkdir dir="${ejbca.plugin.gen.path}/lib"/>
+        <script language="javascript"> <![CDATA[
+		    importClass(java.io.File);
+		    var path = project.getProperty ("ejbca.plugin.collection");
+
+        	// Build one plugin at a time
+        	while (path != null) {
+		        var i = path.indexOf (File.pathSeparatorChar);
+		        var plugin_file = path;
+		        if (i > 0) {
+		            plugin_file = path.substring (0, i);
+		            path = path.substring (i + 1);
+		        } else {
+		            path = null;
+		        }
+		        var antcall = project.createTask ("antcall");
+		        antcall.setTarget ("build-one-plugin");
+		        var prop = antcall.createParam ();
+		        prop.setName ("ejbca.plugin.property.file");
+		        prop.setValue (plugin_file);
+		        antcall.perform ();
+		    }
+    ]]> </script>
+    </target>
+
+	<target name="va_replacings_in_application.xml">
+		<war-replacement-in-module
+			replacement-tag="!--@status.war@-->"
+			replacement-file="${application.xml}"
+			replacement-enabled="${ocsp.enabled}"
+			replacement-web-uri="status.war"
+			replacement-context-root="${ocsp.contextroot}"
+		/>
+		<war-replacement-in-module
+			replacement-tag="!--@certstore.war@-->"
+			replacement-file="${application.xml}"
+			replacement-enabled="${certstore.enabled}"
+			replacement-web-uri="certstore.war"
+			replacement-context-root="${certstore.contextroot}"
+		/>
+		<war-replacement-in-module
+			replacement-tag="!--@crlstore.war@-->"
+			replacement-file="${application.xml}"
+			replacement-enabled="${crlstore.enabled}"
+			replacement-web-uri="crlstore.war"
+			replacement-context-root="${crlstore.contextroot}"
+		/>
+	</target>
+
+    <!-- =================================================================== -->
+    <!-- Build CA-ear                                                        -->
+    <!-- =================================================================== -->
+	<target name="ejbca.ear" depends="display-properties, ejbca.ear.module-dependencies, create-log4config-bundle">
+		<antcall target="doc.war"><param name="external-deps-satfisfied" value="isset"/></antcall>
+	    <property name="caear" value="${dist.dir}/ejbca.ear" />
+		<property name="eardd.src" value="${tmp}/ear" />
+		<!-- Make sure we have an application.xml since we want to specify base URLs. Configure enabled modules. -->
+		<mkdir dir="${eardd.src}/META-INF"/>
+		<copy todir="${eardd.src}/META-INF" file="src/deploy/ear/META-INF/application.xml" overwrite="true" flatten="true" failonerror="true"/>
+		<war-replacement-in-module
+			replacement-tag="!--@doc.war@-->"
+			replacement-file="${eardd.src}/META-INF/application.xml"
+			replacement-enabled="${doc.war.enabled}"
+			replacement-web-uri="doc.war"
+			replacement-context-root="/ejbca/doc"
+		/>
+		<war-replacement-in-module
+			replacement-tag="!--@renew.war@-->"
+			replacement-file="${eardd.src}/META-INF/application.xml"
+			replacement-enabled="${web.renewalenabled}"
+			replacement-web-uri="renew.war"
+			replacement-context-root="/ejbca/renew"
+		/>
+		<war-replacement-in-module
+			replacement-tag="!--@ejbca-cmp-tcp.war@-->"
+			replacement-file="${eardd.src}/META-INF/application.xml"
+			replacement-enabled="${cmp.tcp.enabled}"
+			replacement-web-uri="ejbca-cmp-tcp.war"
+			replacement-context-root="/ejbca/cmp-tcp"
+		/>
+		<jar-replacement-in-module
+			replacement-tag="!--@ejbca-ws-ejb.jar@-->"
+			replacement-file="${eardd.src}/META-INF/application.xml"
+			replacement-enabled="${ejbcaws.enabled}"
+			replacement-ejb="ejbca-ws-ejb.jar"
+		/>
+		<jar-replacement-in-module
+			replacement-tag="!--@ejbca-xkms-ejb.jar@-->"
+			replacement-file="${eardd.src}/META-INF/application.xml"
+			replacement-enabled="${xkms.enabled}"
+			replacement-ejb="ejbca-xkms-ejb.jar"
+		/>
+		<antcall target="va_replacings_in_application.xml">
+			<param name="application.xml" value="${eardd.src}/META-INF/application.xml"/>
+		</antcall>
+		<!-- This dir has to exist here -->
+		<mkdir dir="${hwtoken.class.dir}"/>
+		<!-- Include Hibernate JPA libraries if they don't exist in the current application server. -->
+		<condition property="bundle-hibernate-exclude" value="" else="**">
+			<isset property="bundle-hibernate-jpa"/>
+		</condition>
+		<!-- Include Xerces library if it don't exist in the current application server (jboss6 won't start with it). -->
+		<condition property="bundle-xerces-exclude" value="xerces*.jar, xml-apis.jar" else="">
+			<isset property="exclude-xerces"/>
+		</condition>
+		<!-- Include Xalan library if it don't exist in the current application server (jboss6 won't start with it). -->
+		<condition property="bundle-xalan-exclude" value="xalan*.jar" else="">
+			<isset property="exclude-xalan"/>
+		</condition>
+		<!-- Include serializer library if it don't exist in the current application server (jboss6 won't start with it). -->
+		<condition property="bundle-serializer-exclude" value="serializer*.jar" else="">
+			<isset property="exclude-serializer"/>
+		</condition>
+		<!-- Do we need special WebSphere handling? -->
+    	<condition property="websphere-specials" value="true"><equals arg1="websphere" arg2="${appserver.type}"/></condition>
+		<!-- Remove possible "leftovers" from previous plugin runs! -->
+	    <delete dir="${ejbca.plugin.gen.path}"/>
+        <!-- Plugin build starts here... -->
+	    <antcall target="plugin-bootstrap-build"/>
+		<!-- Build the EAR -->
+        <ear destfile="${caear}" appxml="${eardd.src}/META-INF/application.xml">
+    		<!-- Specify that we will use a specific WS implementation -->
+            <zipfileset prefix="META-INF/services" dir="${ejbca.home}/src/deploy/ear/META-INF/services/" includes="javax.xml.soap.MetaFactory"/>
+            <zipfileset prefix="META-INF" dir="${ejbca.home}/src/deploy/ear/META-INF" includes="weblogic-application.xml"/>
+        	<!-- The place where to find plugins -->
+		    <zipfileset dir="${ejbca.plugin.gen.path}" erroronmissingdir="false"/>
+            <zipfileset prefix="lib" dir="${lib}">
+            	<!-- Since WepSphere 7's "special" tools can't handle the signature of these objects, we will add them later. -->
+                <include name="bcmail-jdk${java.ver}-145.jar" unless="websphere-specials"/>
+                <include name="bcprov-jdk${java.ver}-145.jar" unless="websphere-specials"/>
+                <include name="bctsp-jdk${java.ver}-145.jar" unless="websphere-specials"/>
+                <include name="cert-cvc.jar" />
+                <include name="log4j-1.2.16.jar" />
+                <include name="ldap.jar" />
+                <include name="commons-*.jar" />
+                <include name="libidn.jar" />	<!-- XKMS -->
+            </zipfileset>
+            <zipfileset prefix="lib" dir="${lib}/batik" includes="*.jar" excludes="${bundle-xerces-exclude}"/>
+            <zipfileset prefix="lib" dir="${lib}/xmlsign" includes="*.jar" excludes="${bundle-xalan-exclude},${bundle-serializer-exclude}"/>	<!-- XKMS -->
+            <fileset dir="${dist.dir}" includes="doc.war"/>
+            <fileset dir="${ejbca.home}/modules/dist">
+                <include name="ejbca-ejb.jar" />
+                <include name="ejbca-ws-ejb.jar" />
+                <include name="ejbca-xkms-ejb.jar" />
+                <include name="adminweb.war" />
+                <include name="cmp.war" />
+                <include name="publicweb.war" />
+                <include name="scep.war" />
+                <include name="healthcheck.war" />
+                <include name="clearcache.war" />
+                <include name="webdist.war" />
+                <include name="status.war" />
+                <include name="certstore.war" />
+                <include name="crlstore.war" />
+                <include name="renew.war" />
+                <include name="ejbca-cmp-tcp.war" />
+            </fileset>
+        	<zipfileset prefix="lib" dir="${ejbca.home}/modules/dist">
+                <include name="externalra-service.jar" />
+                <include name="ejbca-common-web.jar" />
+                <include name="ejbca-interface.jar" />
+                <include name="ejbca-entity.jar" />
+                <include name="log4jconfig.jar" />
+        	</zipfileset>
+        	<zipfileset prefix="lib" dir="${lib}/hibernate" excludes="${bundle-hibernate-exclude}"/>
+        	<zipfileset prefix="lib" dir="${dist.dir}" includes="ejbca-util.jar"/>
+        	<!-- Include PrimeCard HSM libraries. TODO: Test that this works. Previously the classes were included in ejbca-ejb.jar.. -->
+        	<zipfileset prefix="lib" dir="${hwtoken.class.dir}" includes="*.jar"/>
+		</ear>
+    	<antcall target="websphere-specials"/>
+    	<antcall target="signjar">
+        	<param name="signjar.file" value="${caear}"/>
+    	</antcall>
+    </target>
+
+	<target name="websphere-specials" if="websphere-specials">
+		<!--
+		 Some application servers just lets you deploy your JEE5 application and then there is WebSphere
+		 that forces u to also generate WARs in a very medieval way. I hope they have a good reason.
+		 -->
+		<condition property="generate-ws-wars-extension" value="cmd" else="sh"><os family="windows"/></condition>
+		<exec executable="${appserver.home}/bin/endptEnabler.${generate-ws-wars-extension}">
+			<arg line="-v -p ${ejbca.home}/src/appserver/websphere7/webservicegen.properties ${caear}"/>
+		</exec>
+		<!--
+		 Some application servers just lets you do remote calls with their client library and then there is WebSphere
+		 that forces u to also generate remote stubs in a very medieval way. I hope they have a good reason.
+		 
+		 This small tool will generate the stubs and put them in the EJB interface file, since this is available wherever
+		 remote EJB invocation takes place.
+		 -->
+		<exec executable="${appserver.home}/bin/createEJBStubs.${generate-ws-wars-extension}">
+			<arg line="${caear} -verbose" />
+		</exec>
+		<!-- Now when WebSphere is done we can finally add the BC libraries again. -->
+		<jar update="true" destfile="${caear}" basedir="${ejbca.home}" includes="lib/bcmail-jdk${java.ver}-145.jar lib/bcprov-jdk${java.ver}-145.jar lib/bctsp-jdk${java.ver}-145.jar"/>
+    </target>
+
+	<target name="create-log4config-bundle">
+		<mkdir dir="tmp"/>
+		<!-- For appservers that don't come with Log4J we need to bundle a configuration file in the classpath (in the EARs lib/ directory in a JAR) -->
+		<copy file="conf/log4j-${appserver.type}.xml.sample" overwrite="true" tofile="tmp/log4j.xml" failonerror="false"/>
+		<copy file="conf/log4j-${appserver.type}.xml" overwrite="true" tofile="tmp/log4j.xml" failonerror="false"/>
+		<!-- If we don't have a specific file for an appserver, perhaps we have one for the subtype (i.e. jboss and jboss6) -->
+		<copy file="conf/log4j-${appserver.subtype}.xml.sample" overwrite="true" tofile="tmp/log4j.xml" failonerror="false"/>
+		<copy file="conf/log4j-${appserver.subtype}.xml" overwrite="true" tofile="tmp/log4j.xml" failonerror="false"/>
+		<jar destfile="modules/dist/log4jconfig.jar" whenempty="skip" basedir="tmp" includes="log4j.xml"/>
+		<delete file="tmp/log4j.xml"/>
+	</target>
+	
+    <!-- =================================================================== -->
+    <!-- Build VA-ear                                                        -->
+    <!-- =================================================================== -->
+    <target name="va-ear" depends="fail-unless-appserver-detected, display-properties, vahealthcheck.war, create-log4config-bundle">
+		<property name="eardd.src" value="${tmp}/va-ear" />
+		<mkdir dir="${eardd.src}/META-INF"/>
+		<copy todir="${eardd.src}/META-INF" file="src/deploy/va-ear/META-INF/application.xml" flatten="true" failonerror="true"/>
+		<antcall target="va_replacings_in_application.xml">
+			<param name="application.xml" value="${eardd.src}/META-INF/application.xml"/>
+		</antcall>
+		<!-- Include Hibernate JPA libraries if they don't exist in the current application server. -->
+		<condition property="bundle-hibernate-exclude" value="" else="**">
+			<isset property="bundle-hibernate-jpa"/>
+		</condition>
+        <mkdir dir="${va-dist.dir}"/>
+        <ear destfile="${va-dist.dir}/ejbca.ear" appxml="${eardd.src}/META-INF/application.xml"> 
+            <zipfileset prefix="lib" dir="${lib}">
+                <include name="bcmail-jdk${java.ver}-145.jar" />
+                <include name="bcprov-jdk${java.ver}-145.jar" />
+                <include name="cert-cvc.jar" />
+                <include name="log4j-1.2.16.jar" />
+                <include name="ldap.jar" />
+                <include name="commons-lang-*.jar" />
+                <include name="commons-collections-3.2.jar" />
+                <include name="commons-fileupload-1.0.jar" />
+                <include name="commons-configuration-1.6.jar" />
+                <include name="commons-logging-1.1.1.jar" />
+            </zipfileset>
+        	<zipfileset prefix="lib" dir="${lib}/hibernate" excludes="${bundle-hibernate-exclude}"/>
+            <fileset dir="${ejbca.home}/modules/dist">
+                <include name="healthcheck.war" />
+                <include name="status.war" />
+                <include name="certstore.war" />
+                <include name="crlstore.war" />
+                <include name="va-ejb.jar" />
+            </fileset>
+        	<zipfileset prefix="lib" dir="${ejbca.home}/modules/dist">
+                <include name="va-ejb3-interface.jar" />
+                <include name="va-entity.jar" />
+                <include name="va-common.jar" />
+                <include name="log4jconfig.jar" />
+        	</zipfileset>
+        	<zipfileset prefix="lib" dir="${dist.dir}" includes="ejbca-util.jar"/>
+	</ear>
+    </target>
+	
+    <!-- =================================================================== -->
+    <!-- Build Javadoc part                                                  -->
+    <!-- =================================================================== -->
+    <target name="javadoc" description="Build JavaDoc for all modules">
+        <mkdir dir="${apidoc}" />
+    	<path id="javadoc-dependencies.classpath">
+    		<fileset dir="${lib}" includes="**/*.jar"/>
+    	</path>
+    	<!-- extdirs="${lib}" -->
+        <javadoc packagenames="org.ejbca.*" maxmemory="256m" destdir="${apidoc}" classpathref="javadoc-dependencies.classpath" 
+        	author="true" version="true" use="true" windowtitle="EJBCA API" bottom="Copyright &#169; PrimeKey Solutions AB." >
+        	<sourcepath location="${ejbca.home}/src/java"/>
+           	<sourcepath location="${ejbca.home}/modules/externalra-scep/src"/>
+           	<sourcepath location="${ejbca.home}/modules/externalra/src"/>
+           	<sourcepath location="${ejbca.home}/modules/ejbca-xkms/src"/>
+           	<sourcepath location="${ejbca.home}/modules/ejbca-ws-cli/src"/>
+           	<sourcepath location="${ejbca.home}/modules/ejbca-ws-cli/src-gen"/>
+           	<sourcepath location="${ejbca.home}/modules/ejbca-ws/src"/>	<!-- ECA-1396 will probably change this.. -->
+           	<sourcepath location="${ejbca.home}/modules/ejbca-ejb-cli/src"/>
+           	<sourcepath location="${ejbca.home}/modules/clientToolBox/src"/>
+           	<sourcepath location="${ejbca.home}/modules/cmpProxy/src"/>
+           	<sourcepath location="${ejbca.home}/modules/ejbca-entity/src"/>
+        </javadoc>
+    	<echo message=""/>
+    	<dirname file="${apidoc}/index.html" property="javadoc.dir"/>
+    	<echo message="EJBCA API is available in file://${javadoc.dir}/index.html"/>
+    </target>
+
+    <!-- ========================================================================== -->
+    <!-- Upgrades the database for a new version of ejbca                           -->
+    <!-- ========================================================================== -->
+    <target name="base-upgrade" depends="ejbca-ejb-cli">
+        <!-- Get input -->
+        <input message="Which version of EJBCA are you upgrading from:" addproperty="ejbca.upgradefromversion"
+        	validargs="3.11.x"/> 
+        <java dir="${ejbca.home}" jar="${ejbca.home}/dist/ejbca-ejb-cli/ejbca-ejb-cli.jar" fork="true">
+            <arg line="upgrade ${database.name} ${ejbca.upgradefromversion} ${upgrade.post}"/>
+        </java>
+    </target>
+    <target name="set-upgrade">
+        <property name="upgrade.post" value=""/>
+    </target>
+    <target name="set-post-upgrade">
+        <property name="upgrade.post" value="*"/>
+    </target>
+    <target name="upgrade" depends="set-upgrade,base-upgrade"/>
+    <target name="post-upgrade" depends="set-post-upgrade,base-upgrade"/>
+
+    <!-- ======================================================================= -->
+    <!-- Promts for password properties if not previously set.                   -->
+	<!-- Note: This code is duplicated in cli.xml								 -->
+	<!-- Ask the following only at deploy, not at bootstrap						 -->
+    <!-- ======================================================================= -->
+	<target name="inputBootstrapAndDeployPasswords" >
+		<input message="Please enter the password to the database. A blank password works for hsqldb." addproperty="database.password" defaultvalue="">
+			<handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+		</input>
+	</target>
+	
+	
+    <!-- ======================================================================= -->
+    <!-- Promts for password properties if not previously set.                   -->
+	<!-- Note: This code is duplicated in cli.xml								 -->
+	<!-- Ask the following only at deploy, not at bootstrap						 -->
+    <!-- ======================================================================= -->
+	<target name="inputDeployPasswords" unless="j2ee.web-noconfigure">
+		<input message="Please enter the password of the truststore with the CA certificate for https?" addproperty="java.trustpassword" defaultvalue="changeit">
+			<handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+		</input>
+		<input message="Please enter the password of the keystore with the TLS key for https" addproperty="httpsserver.password" defaultvalue="serverpwd">
+			<handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+		</input>
+	</target>
+	
+    <!-- ======================================================================= -->
+    <!-- Deploy EJBCA ear to JBoss                                               -->
+    <!-- ======================================================================= -->
+    <target name="deploy" depends="failinproduction-ca,build, inputDeployPasswords,inputBootstrapAndDeployPasswords" description="Deploy the main EJBCA application">
+    	<antcall target="j2ee:deploy" />
+        <antcall target="showtime" />
+    </target>
+    <target name="va-deploy" depends="failinproduction-va,va-ear,inputDeployPasswords,inputBootstrapAndDeployPasswords" description="Deploy the stand alone Verification Authority (VA)" >
+        <antcall target="j2ee:deployva" />
+        <antcall target="showtime" />
+    </target>
+    <target name="ocsp-deploy" depends="va-deploy" description="Deprecated, use va-deploy instead" >
+        <echo message="Deprecated use va-deploy instead." />
+    </target>
+    
+    <!-- ======================================================================= -->
+    <!-- Renew the keystore used by the web interface on the application server. -->
+    <!-- ======================================================================= -->
+    <target name="renew-keystore" depends="inputDeployPasswords" description="Renews the keystore for the application server web interface. Don't forget to deploy the new keystore afterwards. The old keystore in p12/tomcat.jks will be overwritten.">
+      <ant dir="${ejbca.home}/bin" antfile="cli.xml" target="ejbca:renew-keystore" />
+    </target>
+
+    <!-- ======================================================================= -->
+    <!-- Make a ZIP release file of EJBCA, and a SHA1 checksum of the release    -->
+	<!-- The ZIP file contains all the files used, but not temporary or compile files etc -->
+    <!-- ======================================================================= -->
+	<target name="ziprelease" description="Make a zip file for EJBCA release">
+		<antcall target="clean" />
+
+	<!-- A small script that converts the version x.y.z to x_y_z to be used in the file. JavaScript does not work under Java 1.5. -->
+	<scriptdef name="convertdot" language="javascript">
+	    <![CDATA[
+          ver = project.getProperty("app.version.number");
+		  relstring = ver.replace('.','_');
+	      //self.log(ver);
+	      //self.log(relstring);
+		  project.setProperty("ejbca.zipversion", relstring);
+          str = project.getProperty("ejbca.zipversion");
+	    ]]>
+    </scriptdef>
+		
+		<antcall target="update-svnrev" /> <!-- update svn revision version property -->
+		<convertdot/> <!-- convert dots to underscores in version string -->
+        <!-- <input message="Version tag for zipfile (ex 3_2_1):" addproperty="ejbca.zipversion" /> -->
+		<zip destfile="../ejbca_${ejbca.zipversion}.zip">
+		    <zipfileset dir="." prefix="ejbca_${ejbca.zipversion}" filemode="600" dirmode="700"> 
+		    	<include name="**/**" />
+		    	<exclude name="**/CVS/**" />
+		    	<exclude name="tmp/**" />
+		    	<exclude name="dist/**" />
+		    	<exclude name="va-dist/**" />
+		    	<exclude name="bin/META_INF/**" />
+		    	<exclude name="out/**" />
+		    	<exclude name="p12*/**" />
+		    	<exclude name="hwtoken/**" />
+		        <exclude name="vaHardTokenClasses/**" />
+		    	<exclude name="**/*.class" />
+		    	<exclude name=".classpath" />
+		    	<exclude name=".project" />
+		    	<exclude name="**/.cvsignore" />
+		    	<exclude name="**/ejbca.properties" />
+		    	<exclude name="conf/*.properties" />
+		    	<exclude name="conf/logdevices/*.properties" />
+		    	<exclude name="**/*.sh" />
+		    	<exclude name="**/jndi.properties" />
+		    	<exclude name="**/hs_err*" />
+		    </zipfileset>
+		    <zipfileset dir="." prefix="ejbca_${ejbca.zipversion}" filemode="700" dirmode="700"> 
+		    	<include name="**/*.sh" />
+		    </zipfileset>
+		    <zipfileset dir="." prefix="ejbca_${ejbca.zipversion}" filemode="600" dirmode="700">
+		    	<include name="conf/extendedkeyusage.properties" />		    	
+		    </zipfileset>
+		</zip>
+        <antcall target="signjar">
+            <param name="signjar.file" value="../ejbca_${ejbca.zipversion}.zip"/>
+        </antcall>
+        <checksum file="../ejbca_${ejbca.zipversion}.zip" algorithm="SHA1" forceOverwrite="yes"/>      
+        <checksum file="../ejbca_${ejbca.zipversion}.zip" algorithm="SHA1" property="ejbcaSHA1"/>      
+        <echo message="SHA1 checksum: ${ejbcaSHA1}" />
+	</target>
+
+    <!-- ======================================================================= -->
+    <!-- Display application version string                                      -->
+    <!-- ======================================================================= -->
+	<target name="ejbcaversion" description="Output application version string.">
+		<echo>${app.version}</echo>
+	</target>
+
+    <!-- ======================================================================= -->
+    <!-- Target updating svn revision string in propertiesAndPaths.xml           -->
+    <!-- ======================================================================= -->
+	<target name="update-svnrev" description="Updates propertiesAndPaths.xmli file with current trunk SVN revision">
+		<echo>Trying to update src/internal.properties with SVN revision of COMMITTED.</echo>
+        <property name="revision" value="COMMITTED"/>	
+		
+        <!-- find out svn.revision of HEAD, need svn.exe installed on local machine will end up in property ${Revision} -->
+        <exec executable="svn" output="svnlog.out">
+            <arg line="info -r ${revision}"/>
+        </exec>
+		<loadproperties srcFile="svnlog.out">
+		      <filterchain>
+		        <linecontains>
+		          <contains value="Revision"/>
+		        </linecontains>
+		      </filterchain>
+		</loadproperties>
+		<delete file="svnlog.out"/>
+		<antcall target="update-svnrev-updatefile" /> <!-- do update of file only if property is set -->
+    </target>
+
+	<target name="update-svnrev-updatefile" if="Revision">
+		<replaceregexp file="src/internal.properties" encoding="UTF-8" match='(svn.revision=).*'
+			replace='\1r${Revision}' />
+		<echo>Updated "svn.revision" to: r${Revision}</echo>
+    </target>
+	
+     
+	<!--
+        Target for signing a JAR (JAR, EAR, WAR or ZIP)
+        parameter: signjar.file=file to sign 
+	-->
+    <target name="signjar">
+        <available file="${signjar.keystore}" property="signjar.keystorepresent" value="true"/>	
+    	<condition property="signjar.message" value="Using keystore ${signjar.keystore}."
+    		else="Specify -Dsignjar.keystore=/path/keystore.jks if you want to sign the release." >
+            <isset property="signjar.keystorepresent" />
+    	</condition>
+    	<echo message="${signjar.message}" />
+        <antcall target="signjar.internal" />
+    </target>
+
+    <target name="signjar.internal" if="signjar.keystorepresent">
+        <echo message="Signing ${signjar.file}" />
+        <input message="Enter alias for keystore ${signjar.keystore}:"
+        	addproperty="signjar.keystorealias" defaultvalue="releasesigner" /> 
+        <input message="Enter password for keystore ${signjar.keystore}:"
+        	addproperty="signjar.keystorepass" defaultvalue="foo123" /> 
+        <signjar keystore="${signjar.keystore}" jar="${signjar.file}"
+        	alias="${signjar.keystorealias}" storepass="${signjar.keystorepass}" />
+    </target>
+
+	<!-- ("preprocess" is not run from anywhere right now..) -->
+	<target name="preprocess">
+        <!-- 
+          Fix encoding of files for internal (log) internationalization) 
+		  TODO: This looks more like this is something the French language contributor should run before a commit. Should be combined with the diff-script to show missing and redundant translations. 
+        --> 		
+		<delete file="${tmp}/intresources/intresources.fr.properties"/>
+    	<native2ascii encoding="ISO8859-1" 
+    		src="${tmp}/intresources" 
+    		dest="${tmp}/intresources"
+    		includes="intresources.fr.properties" 
+    	/>
+	</target>
+	
+	<target name="ejbca.ear.module-dependencies">
+    	<ant dir="modules" target="ejbca.ear.module-dependencies"/>
+	</target>
+
+    <target name="ejbca-entity">
+    	<ant dir="modules" target="ejbca-entity" />
+    </target>
+
+    <target name="va-entity">
+    	<ant dir="modules" target="va-entity" />
+    </target>
+
+    <target name="generate-dbscripts" description="Generate create and drop script for the configured database.">
+    	<ant dir="modules/ejbca-entity" target="generate-dbscripts" />
+    </target>
+
+	<target name="ejbca-ejb-interface">
+       	<ant dir="modules" target="ejbca-ejb-interface" />
+    </target>
+
+	<target name="va-ejb-interface">
+       	<ant dir="modules" target="va-ejb-interface" />
+    </target>
+
+    <target name="ejbca-ejb-cli" description="Builds EJBCA command line interface">
+    	<ant dir="modules" target="ejbca-ejb-cli" />
+    </target>
+	
+    <target name="adminweb.war">
+    	<ant dir="modules" target="admin-gui" />
+    </target>
+
+    <target name="publicweb.war">
+    	<ant dir="modules" target="publicweb-gui" />
+    </target>
+
+    <target name="cmp.war">
+    	<ant dir="modules" target="cmp-war" />
+    </target>
+
+    <target name="healthcheck.war">
+    	<ant dir="modules" target="healthcheck-ejbca-war" />
+    </target>
+		
+    <target name="clearcache.war">
+    	<ant dir="modules" target="clearcache-ejbca-war" />
+    </target>
+		
+    <target name="vahealthcheck.war">
+    	<ant dir="modules" target="healthcheck-va-war" />
+    </target>	
+
+    <target name="renew.war" if="renew.war.enabled">
+    	<ant dir="modules" target="renew-war" />
+    </target>   
+
+    <target name="scep.war">
+    	<ant dir="modules" target="scep-war" />
+    </target>
+
+    <target name="status.war">
+    	<ant dir="modules" target="va-ejbca-war" />
+    </target>
+	
+    <target name="va-war">
+    	<ant dir="modules" target="va-va-war" />
+    </target>
+
+    <target name="webdist.war">
+    	<ant dir="modules" target="webdist-war" />
+    </target>
+
+	<target name="clientToolBox" description="Builds command line clients as separate toolbox that can be deployed separately">
+    	<ant dir="modules" target="clientToolBox" />
+    </target>
+
+    <target name="ejbca-cmp-tcp">
+    	<ant dir="modules" target="ejbca-cmp-tcp" />
+    </target>
+	
+    <target name="cmpTcpProxy" description="Builds a CMP TCP proxy.">
+    	<ant dir="modules" target="cmpTcpProxy" />
+    </target>
+	
+    <target name="cmpHttpProxy" description="Builds a CMP HTTP proxy.">
+    	<ant dir="modules" target="cmpHttpProxy" />
+    </target>
+	
+	<target name="showtime" >
+		<tstamp>
+			<format property="completiontime" pattern="yyyy-MM-dd HH:mm:ss Z"/>
+		</tstamp>
+		<echo message="Task completed ${completiontime}."/>
+	</target>
+	
+    <target name="ejbcaws.client" description="Build the EJBCA WS-API client">
+    	<ant dir="modules" target="ejbca-ws-cli" />
+    </target>
+
+    <target name="ejbcaws.war" description="Build the EJBCA WS WAR">
+    	<ant dir="modules" target="ejbca-ws"/>
+    </target>
+
+    <target name="ejbca-ws-generate" description="Generate the EJBCA Web Services client source code files (used by developers of new WS API calls)">
+    	<ant dir="modules" target="ejbca-ws-generate"/>
+    </target>
+
+    <target name="xkms.client" description="Build the EJBCA XKMS client">
+    	<ant dir="modules" target="ejbca-xkms-cli" />
+    </target>
+
+    <target name="xkms.war" description="Build the EJBCA XKMS WAR">
+    	<ant dir="modules" target="ejbca-xkms"/>
+    </target>
+	
+	<target name="externalra-service">
+    	<ant dir="modules" target="externalra-service"/>
+	</target>
+
+	<target name="externalra-client">
+    	<ant dir="modules" target="externalra-client"/>
+	</target>
+
+	<target name="externalra-scep" description="Build the EJBCA External RA StandAlone SCEP application">
+    	<ant dir="modules" target="externalra-scep"/>
+	</target>
+
+	<target name="externalra-scep-deploy" description="Deploy the EJBCA External RA StandAlone SCEP application" depends="externalra-scep">
+        <antcall target="j2ee:deploy-scep-war" />
+	</target>
+
+	<target name="externalra-gui" description="Build the EJBCA External RA StandAlone GUI application">
+    	<ant dir="modules" target="externalra-gui"/>
+	</target>
+
+	<target name="externalra-gui-deploy" description="Deploy the EJBCA External RA StandAlone GUI application" depends="externalra-gui">
+        <antcall target="j2ee:deploy-externalragui-war" />
+	</target>
+
+	<target name="batchenrollment-gui" description="Build the EJBCA Batch Enrollment StandAlone GUI application" depends="ejbcaws.client">
+    	<ant dir="modules" target="batchenrollment-gui"/>
+	</target>
+
+	<target name="jbosslogsigning" description="Build signing Log4j appended for JBoss">
+    	<ant dir="modules" target="appserver-ext-jbosslogsigning"/>
+	</target>
+
+	<target name="jbosslog4jsafer" description="Build Log4j ErrorHandler and Appender extensions for JBoss">
+    	<ant dir="modules" target="appserver-ext-jbosslog4jsafer"/>
+	</target>
+
+    <target name="ejbca-util-signserver.jar" description="Creates util library for use in SignServer">
+        <ant dir="modules/ejbca-ejb" target="build-util-signserver"/>
+    </target>
+
+    <target name="clover.html">
+        <ant dir="modules" target="clover.html"/>
+    </target>
+
+    <target name="clover.clean">
+        <ant dir="modules" target="clover.clean"/>
+    </target>
+
+    <target name="clover.xml">
+        <ant dir="modules" target="clover.xml"/>
+    </target>
+
+</project>

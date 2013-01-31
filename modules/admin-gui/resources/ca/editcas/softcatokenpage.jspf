@@ -1,0 +1,108 @@
+<%               
+  SoftCATokenInfo softcatokeninfo = (SoftCATokenInfo) catokeninfo; 
+  int[] AVAILABLEKEYSIZES = {1024,2048,4096,8192};
+  int[] AVAILABLEKEYSIZES_DSA = {/*512,*/1024};
+%>
+    <tr  id="Row<%=row%2%>">       
+      <td width="50%"  align="right"> 
+        <%= ejbcawebbean.getText("AUTHENTICATIONCODE") %>
+      </td>
+      <td width="50%"> 
+        <input type="password" name="<%=TEXTFIELD_AUTHENTICATIONCODE%>" size="20" maxlength="255" />
+        &nbsp;
+    <% if(!editca){ %>
+        <span class="help"><%= ejbcawebbean.getText("AUTHCODE_HELP_EMPTYFORDEFAULT") %></span>
+    <% } else { %>
+        <span class="help"><%= ejbcawebbean.getText("AUTHCODE_HELP_ONLYACTIVATION") %></span>
+    <% } %>
+      </td>
+    </tr>
+    <tr id="Row<%=row++%2%>"> 
+      <td width="50%"  align="right"> 
+        <%= ejbcawebbean.getText("AUTHENTICATIONCODEAUTOACTIVATE") %>
+      </td>
+      <td width="50%"> 
+        <input type="checkbox" name="<%=CHECKBOX_AUTHENTICATIONCODEAUTOACTIVATE %>" value="<%=CHECKBOX_VALUE %>"
+            <% if (editca) {
+                 String prop = softcatokeninfo.getProperties();
+                 if ( (prop != null) && (prop.contains(ICAToken.AUTOACTIVATE_PIN_PROPERTY)) ) {
+                   out.write("CHECKED");
+                 }
+               } else {
+                 out.write("CHECKED");
+               }
+             %> id="<%=CHECKBOX_AUTHENTICATIONCODEAUTOACTIVATE%>">
+           <label for="<%=CHECKBOX_AUTHENTICATIONCODEAUTOACTIVATE%>"><c:out value="<%= ejbcawebbean.getText(\"ACTIVATE\") %>" /></label>
+      </td>
+    </tr>
+    <tr  id="Row<%=row%2%>"> 
+      <td width="50%"  align="right"> 
+        <strong><%= ejbcawebbean.getText("SIGNINGALGORITHM") %></strong>
+      </td>
+      <td width="50%"> 
+           <% if(editca){
+                  out.write(softcatokeninfo.getSignatureAlgorithm());
+              }else{%>
+        <select name="<%=SELECT_SIGNATUREALGORITHM %>" size="1">
+                
+                <% for(int i=0; i < AlgorithmConstants.AVAILABLE_SIGALGS.length; i++){ %>
+                     <option value="<%= AlgorithmConstants.AVAILABLE_SIGALGS[i]%>"><%= AlgorithmConstants.AVAILABLE_SIGALGS[i] %></option>  
+                <% } %> 
+	 </select>
+           <% } %>
+      </td>
+    </tr>
+    <%
+    if (!editca || (softcatokeninfo.getSignatureAlgorithm().indexOf("RSA") != -1) ) {
+    %>
+    <tr  id="Row<%=row%2%>"> 
+      <td width="50%"  align="right"> 
+        <%= ejbcawebbean.getText("KEYSIZERSA") %>
+      </td>
+      <td width="50%"> 
+           <% if(editca){
+                out.write(softcatokeninfo.getSignKeySpec());
+              }else{%>
+        <select name="<%=SELECT_KEYSIZE %>" size="1" >                
+                <% for(int i=0; i < AVAILABLEKEYSIZES.length; i++){ %>
+                     <option value="<%= AVAILABLEKEYSIZES[i]%>"><%= AVAILABLEKEYSIZES[i] %></option>  
+                <% } %> 
+	</select>
+           <% } %> 
+      </td>
+    </tr>
+    <% } if (!editca || (softcatokeninfo.getSignatureAlgorithm().indexOf("DSA") != -1 && 
+    		softcatokeninfo.getSignatureAlgorithm().indexOf("ECDSA") == -1) ) {
+    %>
+    <tr  id="Row<%=row%2%>"> 
+      <td width="50%"  align="right"> 
+        <%= ejbcawebbean.getText("KEYSIZEDSA") %>
+      </td>
+      <td width="50%"> 
+           <% if(editca){
+                out.write(softcatokeninfo.getSignKeySpec());
+              }else{%>
+        <select name="<%=SELECT_KEYSIZE_DSA %>" size="1" >                
+                <% for(int i=0; i < AVAILABLEKEYSIZES_DSA.length; i++){ %>
+                     <option value="<%= AVAILABLEKEYSIZES_DSA[i]%>"><%= AVAILABLEKEYSIZES_DSA[i] %></option>  
+                <% } %> 
+	    </select>
+           <% } %> 
+      </td>
+    </tr>
+    <% } if (!editca || (softcatokeninfo.getSignatureAlgorithm().indexOf("ECDSA") != -1) ) {
+    %>
+    <tr  id="Row<%=row++%2%>"> 
+      <td width="50%"  align="right"> 
+        <%= ejbcawebbean.getText("KEYSPEC") %> <%= ejbcawebbean.getHelpReference("/adminguide.html#Named%20curves") %>
+      </td>
+      <td width="50%"> 
+           <% if(editca){
+                out.write(softcatokeninfo.getSignKeySpec());
+              }else{%>
+                <input type="text" name="<%=TEXTFIELD_KEYSPEC%>" size="20" maxlength="255">              
+           <% } %> 
+      </td>
+    </tr>
+    <% } %>
+ 

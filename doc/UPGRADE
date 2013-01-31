@@ -1,0 +1,664 @@
+$Id: UPGRADE 13473 2011-12-22 11:46:21Z anatom $
+
+UPGRADE
+=======
+
+This document describes procedures needed to upgrade from one 
+version of EJBCA to a new version.
+Upgrades within a major version, from 3.6.1 to 3.6.2 for example, are 
+usually plug-in upgrades and can be made simply by deploying the new 
+software. See doc/RELEASE_NOTES for info about such upgrades.
+
+If you use the patch file to upgrade use a command like:
+- Have old version of ejbca unzipped to directory ejbca.
+- Go to directory ejbca and apply patch with:
+- patch --strip=0 -u < ../patch-396_397.txt
+(change name of patch file depending on which version you are upgrading)
+
+After this you must do:
+- ant clean
+- ant deploy
+
+All database upgrades require CREATE and ALTER TABLE privileges besides the regular SELECT, UPDATE,
+INSERT and DELETE. The SQL executed by database upgrades code is available in
+"src/upgrade/<oldversion>_<newversion>/<oldversion>_<newversion>-upgrade-<database>.sql".
+
+From EJBCA 4.0.x to EJBCA 4.0.x
+-------------------------------
+See release notes for details between certain versions. 
+Normally upgrades within a major release are plug-in upgrades.
+
+Simply copy conf/*.properties from the earlier installation (if not using ejbca-custom).
+Merge changes (if there are any) from *.properties.sample into your *.properties.
+Copy the directory 'p12' from the earlier installation and do 'ant deploy' with the new version.
+
+Note the possibility to use 'ejbca-custom' directory since EJBCA 3.5.x, this can simplify upgrades. 
+See Admin Guide
+
+Read RELEASE_NOTES carefully in order to see if any particular changes might effect your upgrade particularly.
+
+If you get a "java.lang.NoSuchMethodError" in the admin GUI it is because JBoss does not clean temporary files very good.
+Delete the directories JBOSS_HOME/server/default/tmp and JBOSS_HOME/server/default/work and restart JBoss to get it working.
+
+NOTE: In 4.0.7 the healthcheck URL for the VA, was changed. See conf/va.properties.sample for details how to reconfigure 
+your healthcheck URL.
+
+EJBCA 4.0alpha1 NOTE
+--------------------
+There is no guarantee that there will be an upgrade path between the alpha release and EJBCA 4.0.0.
+You can try the upgrade process, but backup you database first and roll it back before trying to
+upgrade to the real release.
+
+From EJBCA 3.11.x to EJBCA 4.0.x
+--------------------------------
+If you installed fresh on or upgraded to EJBCA 3.11.0 or EJBCA 3.11.1 on MySQL, start by reading
+the next section before continuing.
+
+Support for ProtectedLog that was deprecated in EJBCA 3.10.0 has been dropped. If you use this feature,
+export the logs before upgrading. When the data from these tables are securely stored elsewhere or if
+you never used this feature, these tables and indexes can be dropped.
+
+Support for table protection (configured in proptecion.properties) that was deprecated in EJBCA 3.11
+has now been dropped. If you don't have any data in these tables, the indexes and tables can be dropped.
+
+EJBCA 4.0 requires an application server supporting JEE5. For JBoss this means at least JBoss 5.1.x.
+For details on how the application server should be configured, see the installation document.
+
+*Notes for on-line upgrades*
+1. If you were running an earlier version of EJBCA on an older JBoss (4.2.3 was recommended for EJBCA 3.x), 
+   *and* you need to do an on-line upgrade (upgrade one cluster node while another is running) you should 
+   first upgrade your cluster to to running on JBoss 5.1.x before upgrading any of the cluster nodes to EJBCA 4. 
+2. Configure "app.version.effective=3.11.x" in conf/ejbca.properties for all but the last node that you
+   deploy with EJBCA 4.0.x. Comment out the property and redeploy the other nodes again. This will ensure that
+   the JBoss serialization still works for the deployed EJBCA 3.11.x nodes during the migration.
+
+The values of "customAvailableAccessRules" and "RNGAlgorithm" (Random Number Generator) are now configurable 
+from conf/ejbca.properties instead of being read through the ENC.
+
+The 'database.name' property in database.properties changed from mssql2000 to mssql for MS-SQL Server.
+The 'database.url' property in database.properties no longer needs XML escaping for '&'-characters.
+The 'ocsp-database.url' property in ocsp.properties no longer needs XML escaping for '&'-characters.
+
+Backup your database first! If the upgrade fails, you can always go back to the earlier version.
+If you are upgrading a cluster, update the software on all the nodes.
+
+1. Copy conf/*.properties from the earlier installation into the conf directory of the new release.
+   Or better yet, use the ejbca-custom feature for easier upgrades, see User Guide.
+
+2. Copy the directory 'p12' from the earlier installation. 
+
+3. Shut down JBoss and do 'ant bootstrap' with the new version.
+
+4. Start up JBoss.
+
+5. If you are upgrading on JBoss, do 'ant post-upgrade' on one of the nodes. This will convert all
+   JBoss serialized objects into regular Java serialized objects and allow you to switch
+   application server in the future.
+
+6. Restart JBoss again to flush all caches.
+
+7. Go into the Admin GUI and verify you settings.
+
+New in EJBCA 4.0 is that we have a well defined database schema, that is functionally equal for all
+supported databases. You can verify that your database schema is correct by comparing it to the SQL
+table create script for your database ('doc/sql-scripts/create-tables-ejbca4-{database name}.sql').
+
+Note: Some deprecated methods have been removed in 4.0. For example in the publisher API. If you used those methods
+to create custom publishers you need to update your code to match the new interfaces. To make it easy there is only
+new parameters that are not needed to use.
+
+From EJBCA 3.11.0 or 3.11.1 to EJBCA 3.11.x
+-------------------------------------------
+Read RELEASE_NOTES carefully in order to see if any particular changes might effect your upgrade.
+
+Normally upgrades within a major release are plug-in upgrades.
+
+Simply copy conf/*.properties from the earlier installation (if not using ejbca-custom).
+Merge changes (if there are any) from *.properties.sample into your *.properties.
+Copy the directory 'p12' from the earlier installation and do 'ant deploy' with the new version.
+
+Note the possibility to use 'ejbca-custom' directory since EJBCA 3.5.x, this can simplify upgrades. 
+See Admin Guide
+
+* There is one issue that only affects installations upgraded to or freshly installed on EJBCA 3.11.0. 
+
+The database mapping for KeyRecoveryData.certSN on _MySQL_ in 3.11.0 was wrong and can be corrected
+by running:
+    ALTER TABLE KeyRecoveryData MODIFY certSN varchar(80) binary NOT NULL DEFAULT '';
+
+The database mapping for UserData.cardNumber in the table create script on _MySQL_ in 3.11.0 and
+UPGRADE notes in 3.11.1 was wrong and can be corrected by running:
+        ALTER TABLE UserData MODIFY cardNumber varchar(250) binary NULL DEFAULT NULL;
+
+The database mapping for ServiceData.nextRunTimeStamp and runTimeStamp was inconsistent on _Sybase_
+in 3.11.0 and can be corrected by running:
+    ALTER TABLE ServiceData MODIFY nextRunTimeStamp DECIMAL(20,0) DEFAULT 0 NOT NULL;
+    ALTER TABLE ServiceData MODIFY runTimeStamp DECIMAL(20,0) DEFAULT 0 NOT NULL;
+
+From EJBCA 3.10.x to EJBCA 3.11.x
+--------------------------------
+Backup your database first! If the upgrade fails, you can always go back to the earlier version.
+
+If you are upgrading a cluster, you should run the upgrade process with only one node running,
+and then simply update the software on the other nodes.
+
+1. Copy conf/*.properties from the earlier installation into the conf directory of the new release.
+   Or better yet, use the ejbca-custom feature for easier upgrades, see User Guide.
+
+2. Copy the directory 'p12' from the earlier installation. 
+
+3. Shut down JBoss and do 'ant bootstrap' with the new version.
+
+4. Start up JBoss. You might see some errors during startup due to that the database is not upgraded yet.
+
+5. Issue the command 'ant upgrade' from EJBCA_HOME. This will make the necessary database updates. 
+   Note: On some application server you may have to upgrade the database manually, see below.
+
+6. Do 'ant post-upgrade' to make sure the new database columns in table ServiceData are populated, 
+   and add new database column to PublisherQueueData.
+
+6. Restart JBoss again to flush all caches.
+
+7. Go into the Admin GUI and verify you settings.
+
+The database upgrade is normally done automatically for you when you run 'ant upgrade' and 'ant post-upgrade'. 
+Some application servers will not let you deploy unless the database is in sync though, so you may have
+to run the SQL commands manually. Check src/upgrade/310_311 to find the correct sql files for your database.
+
+You should be able to upgrade from EJBCA 3.2.x directly to 3.11.x, by following the same instructions
+as above (this upgrade is not thoroughly tested though). 
+Also see instructions below for additional issues when upgrading all the way from a much older version. 
+*This is very important, depending on your database version you may have to do some additional steps for some of the upgrades.*
+
+From EJBCA 3.10.x to EJBCA 3.10.x
+-------------------------------
+See release notes for details between certain versions. 
+Normally upgrades within a major release are plug-in upgrades.
+
+Simply copy conf/*.properties from the earlier installation (if not using ejbca-custom).
+Merge changes (if there are any) from *.properties.sample into your *.properties.
+Copy the directory 'p12' from the earlier installation and do 'ant deploy' with the new version.
+
+Note the possibility to use 'ejbca-custom' directory since EJBCA 3.5.x, this can simplify upgrades. 
+See Admin Guide
+
+Read RELEASE_NOTES carefully in order to see if any particular changes might effect your upgrade particularly.
+
+From EJBCA 3.9.x to EJBCA 3.10.x
+--------------------------------
+Backup your database first! If the upgrade fails, you can always go back to the earlier version.
+
+If you are upgrading a cluster, you should run the upgrade process with only one node running,
+and then simply update the software on the other nodes.
+
+1. Copy conf/*.properties from the earlier installation into the conf directory of the new release.
+   Or better yet, use the ejbca-custom feature for easier upgrades, see User Guide.
+
+2. Copy the directory 'p12' from the earlier installation. 
+
+3. Shut down JBoss and do 'ant bootstrap' with the new version.
+
+4. Start up JBoss. You might see some errors during startup due to that the database is not upgraded yet.
+
+5. Issue the command 'ant upgrade' from EJBCA_HOME. This will make the necessary database updates. 
+   Note: On some application server you may have to upgrade the database manually, see below.
+
+6. Restart JBoss again to flush all caches.
+
+7. Go into the Admin GUI and verify you settings.
+
+8. Do 'ant post-upgrade' if you want "Enforce unique public keys" to check against old certificate
+   (see below).
+
+
+In EJBCA 3.10 some unused code related to the "protection.keyref" property in conf/protection.properties
+has been dropped. This also means a small database change where the unused column TableProtectData.keyRef
+is dropped. To see which database structural changes are made you can find the SQL commands for your
+database in src/upgrade/39_310/39_310-upgrade-<<database name>>.sql.
+
+Approvals that are pending during the upgrade process will be upgraded automatically. These are Java
+Objects and cannot be upgraded manually using custom SQL. If you need to perform a manual SQL update
+all pending approvals should be taken care of before the upgrade.
+
+A quick fix for the LogEntryData table that was spread in the wild in 2005 will also be corrected in
+this release. The column "comment" (or "comment_" on Oracle) will change name to "logComment" for all
+databases. Since older versions of DB2 than 9.7 cannot rename columns, it requires a massive UPDATE
+operation on this database. DB2 9.7+ users can alter src/upgrade/39_310/39_310-upgrade-db2.sql to use
+"ALTER TABLE LogEntryData RENAME COLUMN comment TO logComment;" instead. For all other databases this
+renaming will be handled automatically by "ant upgrade". Please note that logging to the OldLogDevice
+will not work during this upgrade.
+
+The database upgrade is normally done automatically for you when you run 'ant upgrade'. 
+Some application servers will not let you deploy unless the database is in sync though, so you may have
+to run the SQL commands manually.
+
+The ProtectedLogDevice has been deprecated, since it's hard to configure right and extremely
+inefficient. There are currently plans to create a LogDevice aiming at non-repudiation rather than
+detection of missing log-entries.
+
+The option to use a separate soft keystore for the internal OCSP responder is no longer available. The
+upgrade will remove the soft keystore and OCSP requests will be signed directly by the CA signing
+certificate (currently the default behavior). External OCSP installations are not affected.
+
+To improve testing there is a new configuration option to allow changing used properties through Remote
+EJB access using conf/ejbca.properties#ejbca.productionmode. Default is to not allow configuration
+changes, but some of the development system tests will fail until this is allowed.
+
+The External RA module is now a part of the main EJBCA bundle and uses JPA for persistence. DataSources
+used by the workers are configured in conf/externalra.properties. Properties for each worker are configured
+under Services in the Admin GUI. Also the external SCEP RA application is now built from the main bundle
+and is configured in conf/scep.properties. The documentation is available as a part of the generated doc.
+The API as such has not changed and old client should still work, but External RA workers in EJBCA have to
+be reconfigured.
+
+Note that this version contains an inevitable API change for custom extensions because 
+the CA key used to sign certificates does not have to be the same as the currently active CA key.
+If you have created any custom extensions Java classes, you must add:
+"PublicKey caPublicKey" to the parameter list in the getValue method. The value does not have to be handled.
+
+Two more checks are now done before adding a certificate. See
+http://ejbca.org/userguide.html#Enforce%20unique%20public%20keys and
+http://ejbca.org/userguide.html#Enforce%20unique%20DN
+These checks are enabled on all CA:s that existed before the upgrading. It should not be any problem to
+have them enabled (different users do not normally share same keys or subject DN) in most installations.
+But if you know that your users shares subject DNs or keys with each other they could be disabled.
+
+A new column in the database (subjectKeyId) for "Enforce unique public keys" is added when 'ant upgrade' is
+executed. To check the public key in new certificates against certificates issued before the upgrade this
+column has to be set (after upgrade all rows of the column is null). The columns is set by 'ant post-upgrade'
+(see step 8 above). Please note that 'post-upgrade' might take some minutes if there are many certificates in
+the database. After the upgrade, two new indexes for the enforcing uniqueness should be applied:
+
+    create index certificatedata_idx9 on CertificateData(subjectKeyId,issuerDN);
+    create index certificatedata_idx10 on CertificateData(subjectDN,issuerDN);
+
+To be able to use the OCSP monitoring tool the 'subjectKeyId' column should be added to the External OCSP
+responders, but it does not have to be populated. See src/upgrade/39_310/39_310-upgrade-<<database name>>.sql
+for the exact syntax to use for your OCSP database.
+
+You should be able to upgrade from EJBCA 3.2.x directly to 3.10.x, by following the same instructions
+as above (this upgrade is not thoroughly tested though). Also see instructions below for additional
+issues when upgrading all the way from a much older version.
+
+If you are using some databases, specifically an older version of Derby, you may have to manually upgrade your database. See src/upgrade/39_310/39_310-upgrade-derby.sql.
+
+From EJBCA 3.9.x to EJBCA 3.9.x
+-------------------------------
+See release notes for details between certain versions. 
+Normally upgrades within a major release are plug-in upgrades.
+
+Simply copy conf/*.properties from the earlier installation (if not using ejbca-custom).
+Merge changes (if there are any) from *.properties.sample into your *.properties.
+Copy the directory 'p12' from the earlier installation and do 'ant deploy' with the new version.
+
+Also note the possibility to use 'ejbca-custom' directory since EJBCA 3.5.x, see User Guide.
+
+From EJBCA 3.8.x to EJBCA 3.9.x
+-------------------------------
+Backup your database first! If the upgrade fails, you can always go back to the earlier version.
+
+If you are upgrading a cluster, you should run the upgrade process with only one node running,
+and then simply update the software on the other nodes.
+
+1. Copy conf/*.properties from the earlier installation into the conf directory of the new release.
+   Or better yet, use the ejbca-custom feature for easier upgrades, see User Guide.
+
+2. Copy the directory 'p12' from the earlier installation. 
+
+3. Shut down JBoss and do 'ant bootstrap' with the new version.
+
+4. Start up JBoss. You will see some errors during startup due to that the database is not upgraded yet.
+
+5. Issue the command 'ant upgrade' from EJBCA_HOME. This will make the necessary database updates. 
+   Note: On some application server you may have to upgrade the database manually, see below.
+
+6. Restart JBoss again to flush all caches.
+
+7. Go into the admin-GUI and verify you settings.
+
+In EJBCA 3.9 there are new possibilities for filtering certificates on certificateProfileId and tags. 
+This requires a small database change. To see which database structural changes are made you can find 
+the SQL commands for your database in src/upgrade/38_39/38_39-upgrade-<<database name>>.sql.
+The database upgrade is normally done automatically for you when you run 'ant upgrade'. 
+Some application servers will not let you deploy unless the database is in sync though, so you may have to run 
+the SQL commands manually. The assigned certificateProfileId for each new CertificateData is default 0.
+If you want to assign the last used certificateProfileId used for the same user you can manually execute
+    UPDATE CertificateData SET certificateProfileId=(SELECT certificateProfileId FROM UserData
+		WHERE CertificateData.username=UserData.username);
+    UPDATE CertificateData SET certificateProfileId=0 where certificateProfileId is null;
+but this will take a *very* long time for a large population.
+
+EJBCA 3.9 also has a new table in the database. If you are using JBoss this is created automatically for you.
+If you are using another application server, created the table in your database using the create statement for
+the table PublisherQueueData from one of the create-tables scripts in doc/howto.
+ 
+You should be able to upgrade from EJBCA 3.2.x directly to 3.9.x, by following the same instructions
+as above (this upgrade is not thoroughly tested though). Also see instructions below for additional
+issues when upgrading all the way from a much older version.
+
+Note! If you are using the external RA you need to upgrade to ExtRA 3.9 and follow upgrade instructions 
+in the ExtRA package.
+
+Note! If you have changed the 'tomcat' username for the JBoss SSL server certificate you should check the certificate profile used.
+This is because the old ENDUSER certificate profile can no longer be used for SSL server certificates.
+The corresponding upgrade sql in the normal upgrade script is:
+update UserData set certificateProfileId=9 where username='tomcat' and certificateProfileId=1;
+
+Note! If you are using an external OCSP responder using EJBCA's publishing from EJBCA to the responder, you need to update
+the responders database table CertificateData using the SQL commands above.
+
+Note! If you are using JBoss 5.x. Don't forget to copy new BC jars from EJBCA_HOME/lib/bc*.jar to JBOSS_HOME/server/default/lib, 
+replacing to old ones that you copied there from the old version of EJBCA.
+
+From EJBCA 3.8.x to EJBCA 3.8.x
+-------------------------------
+See release notes for details between certain versions. 
+Normally upgrades within a major release are plug-in upgrades.
+
+Simply copy conf/*.properties from the earlier installation (if not using ejbca-custom).
+Merge changes (if there are any) from *.properties.sample into your *.properties.
+Copy the directory 'p12' from the earlier installation and do 'ant deploy' with the new version.
+
+Also note the possibility to use 'ejbca-custom' directory since EJBCA 3.5.x, see User Guide.
+
+From EJBCA 3.7.x to EJBCA 3.8.x
+-------------------------------
+Note that if using JBoss, you need JBoss 4.2.x or later to run EJBCA 3.8.x. 
+
+From EJBCA 3.8.0 you are able to mix administrators from different CAs in the same Administrator
+Group. This improvement requires a small database change.
+
+The "Administrator" flag on end entities has been dropped, so if you match administrators on CN
+and uses this to distinguish between admins and nonadmins, you should switch to using certificate
+serial number or another unique identifier instead.
+
+Backup your database first! If the upgrade fails, you can always go back to the earlier version.
+
+If you are upgrading a cluster, you should run the upgrade process with only one node running,
+and then simply update the software on the other nodes.
+
+1. Copy conf/*.properties from the earlier installation into the conf directory of the new release.
+   Or better yet, use the ejbca-custom feature for easier upgrades, see User Guide.
+
+2. Merge changes from *.properties.sample into your *.properties files.
+
+3. Copy the directory 'p12' from the earlier installation. 
+
+4. Shut down JBoss and do 'ant deploy' with the new version.
+
+5. Start up JBoss. You could see some errors during startup due to that the database is not upgraded yet.
+
+6. Issue the command 'ant upgrade' from EJBCA_HOME. This will make the necessary database updates. 
+   Note: On some application server you may have to upgrade the database manually, see below.
+
+7. Go into the admin-GUI and verify you settings.
+
+8. Restart JBoss again to flush all caches.
+
+
+Ant upgrade is needed to make the database changes in the authorization module.
+To see which database structural changes are made you can find the SQL commands for your database in
+src/upgrade/37_38/37_38-upgrade-<<database name>>.sql. Note that ant upgrade does more than these sql lines.
+
+You should be able to upgrade from EJBCA 3.1.x directly to 3.8.x, by following the same instructions
+as above (this upgrade is not thoroughly tested though). Also see instructions below for additional
+issues when upgrading all the way from a much older version.
+
+If an upgrade option for your database is not included, take a look in src/upgrade/37_38 where upgrade 
+sql scripts are located. We will happily include upgrade scripts for other databases as well. 
+
+From EJBCA 3.7.x to EJBCA 3.7.x
+-------------------------------
+See release notes for details between certain versions. 
+Normally upgrades within a major release are plug-in upgrades.
+
+Simply copy conf/*.properties from the earlier installation (if not using ejbca-custom).
+Merge changes (if there are any) from *.properties.sample into your *.properties.
+Copy the directory 'p12' from the earlier installation and do 'ant deploy' with the new version.
+
+Also note the possibility to use 'ejbca-custom' directory since EJBCA 3.5.x, see User Guide.
+
+From EJBCA 3.6.x to EJBCA 3.7.x
+-------------------------------
+Upgrade from EJBCA 3.6.x to 3.7.x is a plug-in upgrade.
+
+If you are upgrading a cluster, you should run the upgrade process with only one node running,
+and then simply update the software on the other nodes.
+
+1. Copy conf/*.properties from the earlier installation into the conf directory of the new release.
+   Or better yet, use the ejbca-custom feature for easier upgrades, see User Guide.
+
+2. Copy the directory 'p12' from the earlier installation. 
+
+3. Shut down JBoss and do 'ant bootstrap' with the new version.
+
+4. Start up JBoss.
+
+5. Go into the admin-GUI and verify you settings.
+
+You should be able to upgrade from EJBCA 3.1.x directly to 3.7.x, by following the same instructions
+as above, but answering yes to the second question (this upgrade is not thoroughly tested though).
+Also see instructions below for additional issues when upgrading all the way from a much older version.
+
+If you are using PrimeCardHSM you need to upgrade to a new version, matching EJBCA 3.7.
+
+From EJBCA 3.6.x to EJBCA 3.6.x
+-------------------------------
+See release notes for details between certain versions. 
+Normally upgrades within a major release are plug-in upgrades.
+
+Simply copy conf/*.properties from the earlier installation.
+Merge changes (if there are any) from *.properties.sample into your *.properties.
+Copy the directory 'p12' from the earlier installation and do 'ant deploy' with the new version.
+
+Also note the possibility to use 'ejbca-custom' directory in EJBCA 3.5.x, see User's Guide.
+
+From EJBCA 3.5.x to EJBCA 3.6.x
+-------------------------------
+Backup your database first! If the upgrade fails, you can always go back to the earlier version.
+
+Upgrade from EJBCA 3.5.x to EJBCA 3.6.x requires one small database change.
+
+If you are upgrading a cluster, you should run the upgrade process with only one node running,
+and then simply update the software on the other nodes.
+
+1. Copy conf/*.properties from the earlier installation into the conf directory of the new release.
+   Or better yet, use the ejbca-custom feature for easier upgrades, see User Guide.
+
+2. Merge changes from *.properties.sample into your *.properties files.
+
+3. Copy the directory 'p12' from the earlier installation. 
+
+4. Shut down JBoss and do 'ant bootstrap' with the new version.
+
+5. Start up JBoss. You could see some errors during startup due to that the database is not upgraded yet.
+
+6. Issue the command 'ant upgrade' from EJBCA_HOME. This will make the necessary database updates. 
+   If you are upgrading from EJBCA 3.4 or 3.5, answer 'no' to the second and third question.
+   Note: On some application server you may have to upgrade the database manually, see below.
+
+7. Go into the admin-GUI and verify you settings.
+
+8. Restart JBoss again to flush all caches.
+
+
+If you don't want to do step 6 above (doing step 6 is the recommended way though) and instead want to do the upgrade 
+of the database manually, you can simply issue the following sql command:
+MySQL: 
+  alter table CRLData add deltaCRLIndicator int(11) NOT NULL DEFAULT -1;
+PostgreSQL: 
+  alter table CRLData add deltaCRLIndicator INT;
+  update CRLData set deltaCRLIndicator = -1;
+  alter table CRLData alter column deltaCRLIndicator set not null;
+  alter table CRLData alter column deltaCRLIndicator set default -1;
+Oracle: 
+  alter table CRLData add deltaCRLIndicator NUMBER(10) default -1;
+
+If you are using another application server than JBoss, you need to create new tables in the database 
+manually. Create the new tables ProtectedLogData, ProtectedLogExportData and ProtectedLogTokenData from
+one of the database scripts in doc/howto/create-tables-xxx.sql.
+
+You should be able to upgrade from EJBCA 3.1.x directly to 3.6.x, by following the same instructions
+as above, but answering yes to the second question (this upgrade is not thoroughly tested though).
+Also see instructions below for additional issues when upgrading all the way from a much older version.
+
+If an upgrade option for your database is not included, take a look in src/upgrade/35_36 where upgrade 
+sql scripts are located. We will happily include upgrade scripts for other databases as well. 
+
+The JBoss Mbean create CRL service has been removed in EJBCA 3.6. It has been replaced with the much easier, 
+more portable etc CRL Update Service configured in the Admin-GUI. See the User Guide about CRL creation for details.
+
+If you are using PrimeCardHSM you need to upgrade to a new version, matching EJBCA 3.6.
+
+Note. In EJBCA 3.6 we changed the case of some database column to get full Sybase compatibility. This will not affect
+other database (in that case you would have had problems already), but it can be good to know.
+Column cases changed for most columns in ApprovalData, for cAId in LogEntryData, and for cAId in ProtectedLogData.  
+
+From EJBCA 3.5.x to EJBCA 3.5.x
+-------------------------------
+See release notes for details between certain versions. 
+Normally upgrades within a major release are plug-in upgrades.
+
+Simply copy conf/*.properties from the earlier installation.
+Merge changes (if there are any) from *.properties.sample into your *.properties.
+Copy the directory 'p12' from the earlier installation and do 'ant deploy' with the new version.
+
+Also note the possibility to use 'ejbca-custom' directory in EJBCA 3.5.x, see User's Guide.
+
+From EJBCA 3.4.x to EJBCA 3.5.x
+-------------------------------
+See release notes for details between certain versions. 
+
+EJBCA 3.5 is a plug-in upgrade from EJBCA 3.4.x. A few steps are still needed for upgrade though.
+
+Simply copy conf/*.properties from the earlier installation.
+Merge changes (if there are any) from *.properties.sample into your *.properties.
+Copy the directory 'p12' from the earlier installation and do 'ant deploy' with the new version.
+
+The new root-less install on linux systems makes it much easier to have control of you Java truststore 
+(which CAs that are allowed for administrator certificates) both on linux and windows. 
+You must make these steps during upgrade on both linux and windows:
+- copy $JAVA_HOME/jre/lib/security/cacerts $EJBCA_HOME/p12/truststore.jks
+- ant clean; ant deploy
+
+In EJBCA 3.5 when you run the command 'ant javatruststore' or 'ant -Dca.name=MyCAName javatruststore' it is now 
+the file $EJBCA_HOME/p12/truststore.jks that will be updated and copied to $JBOSS_HOME/server/default/conf/keystore. 
+
+You should also read about the new external merge directory 'ejbca-custom', where you can collect all your 
+own files. See 'Handling changes in a separate tree' in the User's guide.
+
+There are some parameter name changes in ejbca.properties and web.properties. 
+These parameters are only used when freshly installing EJBCA though. If you plan to do this using
+old configuration files, you should merge changes from ejbca.properties.sample and web.properties.sample.
+No worry if you forget though, since you will be prompted for the values instead.
+
+You should be able to upgrade from EJBCA 3.1.x directly to 3.5.x, by following the same instructions for database 
+upgrade as for EJBCA 3.4.
+
+From EJBCA 3.4.x to EJBCA 3.4.x
+-------------------------------
+See release notes for details between certain versions. 
+Normally upgrades within a major release are plug-in upgrades.
+
+Simply copy conf/*.properties from the earlier installation.
+Merge changes (if there are any) from *.properties.sample into your *.properties.
+Copy the directory 'p12' from the earlier installation and do 'ant deploy' with the new version.
+
+From EJBCA 3.3.x to EJBCA 3.4.x
+-------------------------------
+Backup your database first! If the upgrade fails, you can always go back to the earlier version.
+
+Upgrade from EJBCA 3.3.x to EJBCA 3.4.x requires one small database change.
+
+If you are upgrading a cluster, you should run the upgrade process with only one node running,
+and then simply update the software on the other nodes.
+
+1. Copy ejbca.properties from the earlier installation into the conf directory of the new release.
+   Or better yet, split up your ejbca.properties file to match the new improved conf structure.
+
+2. Merge changes from *.properties.sample into your *.properties files.
+
+3. Copy the directory 'p12' from the earlier installation. 
+
+4. Shut down JBoss and do 'ant deploy' with the new version.
+
+5. Start up JBoss. You will see some errors during startup due to that the database is not upgraded yet.
+
+6. Issue the command 'ant upgrade' from EJBCA_HOME. This will make the necessary database updates. 
+   If you are upgrading from EJBCA 3.2 or 3.3, answer 'no' to the second question.
+   Note: On weblogic you have to upgrade the database manually, see below.
+
+7. Go into the admin-GUI and verify you settings, specially verify the DN encoding in 'Edit Certificate Authorities' 
+   as noted below.
+
+8. Restart JBoss again to flush all caches.
+
+
+If you don't want to do step 6 above (doing step 6 is the recommended way though) and instead want to do the upgrade 
+of the database manually, you can simply issue the following sql command:
+MySQL: 
+  alter table CAData add updateTime bigint NOT NULL DEFAULT 0;
+PostgreSQL: 
+  alter table CAData add updateTime INT8;
+  update cadata set updateTime = 0;
+  alter table cadata alter column updateTime set not null;
+  alter table cadata alter column updateTime set default 0;
+Oracle: 
+  alter table CAData add updateTime NUMBER(19) default 0;
+
+Note: Since the default DN encoding changed to UTF8, there is an option in the CA configuration (Edit Certificate authorities)
+called 'Use PrintableString encoding in DN'. Checking this checkbox causes the old behaviour to be used, using PrintableString as the default
+encoding. The upgrade process tries to guess how this value should be set (upgrading an old CA we usually want to keep the old behaviour).
+After the upgrade process, check your CA configuration to verify that the option is set to your liking.
+
+Note: If you intend to use the XKMS service or the CMS service (log signing), then you should go into the Admin-GUI 
+after upgrading and press the button "Republish CA Certificates" for all CAs. 
+Otherwise you will not be able to revoke the certificates issued to these services, or view the certificates in the GUI.
+
+You should be able to upgrade from EJBCA 3.1.x directly to 3.4.x, by following the same instructions
+as above, but answering yes to the second question (this upgrade is not thoroughly tested though).
+
+From EJBCA 3.3.x to EJBCA 3.3.x
+-------------------------------
+See release notes for details between certain versions. 
+Normally upgrades within a major release are plug-in upgrades.
+
+Simply keep/copy ejbca.properties from the earlier installation.
+Merge changes (if there are any) from ejbca.properties.sample into your ejbca.properties.
+Copy the directory 'p12' from the earlier installation and 'ant deploy' 
+(or deploywithjbossservice) this new one.
+
+From EJBCA 3.2.x to EJBCA 3.3.x
+-------------------------------
+Upgrade from EJBCA 3.2.x to EJBCA 3.3.x is a plug-in upgrade, because there are
+no database changes, or the database changes are only new tables and not changed ones.
+
+You should still follow this advice:
+Backup your database first! If the upgrade fails, you can always go back to the earlier version.
+
+Simply keep/copy ejbca.properties from the earlier installation.
+Merge changes from ejbca.properties.sample into your ejbca.properties.
+Copy the directory 'p12' from the earlier installation and 'ant deploy' 
+(or deploywithjbossservice) this new one.
+
+You should be able to upgrade from EJBCA 3.1.x directly to 3.3.x, by following the same instructions
+as when upgrading from 3.1.x to 3.2.x (untested though).
+
+If you are using Eracom HSM, please notice that property names have changed for determining which key is used.
+After upgrading EJBCA, you must go into CA configuration and update your HSM properties.
+The property names are now the same for all different HSMs.
+
+From EJBCA 3.2.x to EJBCA 3.2.x
+-------------------------------
+See release notes for details between certain versions. 
+Normally upgrades within a major release are plug-in upgrades.
+
+Simply keep/copy ejbca.properties from the earlier installation.
+Merge changes (if there are any) from ejbca.properties.sample into your ejbca.properties.
+Copy the directory 'p12' from the earlier installation and 'ant deploy' 
+(or deploywithjbossservice) this new one.
+
+From EJBCA 3.1.x to EJBCA 3.2
+-----------------------------
+Support for this upgrade is no longer available from EJBCA 3.9.x. Please use the latest EJBCA
+release from the 3.8-branch as a first step if you need to upgrade from all the way from here.

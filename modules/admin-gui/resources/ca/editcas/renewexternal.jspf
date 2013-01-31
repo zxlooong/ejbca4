@@ -1,0 +1,93 @@
+
+<% 
+  row = 0;
+%>
+<body > 
+<script type="text/javascript">
+<!--  
+
+function check(file)
+{  
+  
+  if(file.value == ''){   
+     alert("<%= ejbcawebbean.getText("YOUMUSTSELECT", true) %>"); 
+   }else{  
+     return true;  
+   }
+  
+   return false;
+}
+-->
+</script>
+
+<div align="center">
+   <h2><%= ejbcawebbean.getText("RENEWCA") %></h2>
+   <h3><%= ejbcawebbean.getText("CANAME")+ " : " + caname %></h3>
+</div>
+
+<div align="center">
+   <h3><%= ejbcawebbean.getText("MAKEREQUEST") %></h3>
+</div>
+
+  <form name="makerequest" action="<%= THIS_FILENAME %>" method="post" enctype='multipart/form-data' onSubmit='return check(document.makerequest.<%= FILE_RECIEVEFILE %>)'>
+    <input type="hidden" name='<%= ACTION %>' value='<%=ACTION_RENEWCA_MAKEREQUEST %>'>
+    <input type="hidden" name='<%= HIDDEN_CAID %>' value='<%= caid %>'>
+    <input type="hidden" name='<%= HIDDEN_CANAME %>' value='<%= caname%>'>
+    <input type="hidden" name='<%= HIDDEN_RENEWKEYS %>' value='<%= reGenerateKeys %>'>
+    <input type="hidden" name='<%= HIDDEN_ACTIVATEKEYS %>' value='<%= activateKeys %>'>
+    <input type="hidden" name='<%= HIDDEN_RENEWAUTHCODE %>' value='<%= renewauthenticationcode %>'>
+  <table class="action" width="100%" border="0" cellspacing="3" cellpadding="3">
+    <tr id="Row<%=row++%2%>"> 
+      <td width="45%" valign="top"> 
+        &nbsp;
+      </td>
+      <td width="55%" valign="top" align="right"> 
+        <a href="<%=THIS_FILENAME %>"><%= ejbcawebbean.getText("BACKTOCAS") %></a>
+   <!--     <a onclick='displayHelpWindow("<%= ejbcawebbean.getHelpfileInfix("ca_help.html") + "#cas"%>")'>
+        <%= ejbcawebbean.getText("HELP") %></a> -->
+      </td>
+    </tr>
+    <tr  id="Row<%=row++%2%>"> 
+      <td width="45%" valign="top" align="right"><%= ejbcawebbean.getText("MAKEREQUEST_FILEPATH") %>
+      </td>
+      <td width="55%" valign="top">     
+        <input type="file" name="<%= FILE_RECIEVEFILE %>" size="40" />            
+      </td>
+    </tr>
+    <tr  id="Row<%=row++%2%>"> 
+      <td width="45%" valign="top" align="right">&nbsp;
+      </td>
+      <td width="55%" valign="top">     
+        <input type="submit" name="<%= BUTTON_RECIEVEFILE %>"  value="<%= ejbcawebbean.getText("MAKEREQUEST") %>" >        
+      </td>
+    </tr>
+  </table>
+  </form>
+
+<div align="center">   
+   <h3><%= ejbcawebbean.getText("RECIEVEREQUEST") %></h3>
+</div>
+
+  <form name="recieveresponse" action="<%= THIS_FILENAME %>" method="post" enctype='multipart/form-data' onSubmit='return check(document.recieveresponse.<%= FILE_RECIEVEFILE %>)'>
+    <input type="hidden" name='<%= ACTION %>' value='<%=ACTION_RENEWCA_RECIEVERESPONSE %>'>
+    <input type="hidden" name='<%= HIDDEN_CAID %>' value='<%= caid %>'>
+    <input type="hidden" name='<%= HIDDEN_CANAME %>' value='<%= caname%>'>
+  <table class="action" width="100%" border="0" cellspacing="3" cellpadding="3">
+    <tr  id="Row<%=row++%2%>">
+      <td width="45%" valign="top" align="right"><%= ejbcawebbean.getText("RECIEVEREQUEST_FILEPATH") %>
+      </td>
+      <td width="55%" valign="top">
+        <input type="file" name="<%= FILE_RECIEVEFILE %>" size="40" />
+      </td>
+    </tr>
+    <tr  id="Row<%=row++%2%>">
+      <td width="45%" valign="top" align="right">&nbsp;
+      </td>
+      <td width="55%" valign="top">
+        <input type="submit" name="<%= BUTTON_RECIEVEFILE %>"  value="<%= ejbcawebbean.getText("RECIEVEREQUEST") %>" >
+		&nbsp;&nbsp;&nbsp;
+        <input type="submit" name="<%= BUTTON_CANCEL %>" value="<%= ejbcawebbean.getText("CANCEL") %>">
+      </td>
+    </tr>
+  </table>
+  </form>

@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+<document>
+
+  <properties>
+    <title>Features</title>
+  </properties>
+
+<body>
+  <section name="Features">
+      
+  <subsection name="PKI features">
+<ul>
+<li>Multiple CAs and levels of CAs, build a complete infrastructure (or several) within one instance of EJBCA.</li>
+<li>Unlimited number of Root CAs and SubCAs. Request cross certificates and bridge certificates from other CAs and Bridge CAs. Issue cross certificates to other CAs.</li>
+<li>Get your own CA signed by public recognized CAs such as <a href="http://www.comodo.com/">Comodo</a> or <a href="http://www.t-systems.com/">T-Systems</a>.</li>
+<li>Follows X509 and PKIX (RFC5280) standards where applicable.</li>
+<li>Supports RSA key algorithm up to 8192 bits.</li>
+<li>Supports DSA key algorithm with 1024 bits.</li>
+<li>Supports ECDSA key algorithm with named curves or implicitlyCA.</li>
+<li>Support multiple hash algorithms for signatures, MD5, SHA-1, SHA-2.</li>
+<li>Compliant with NSA SUITE B algorithms and certificates.</li>
+<li>Support for X.509 certificates and Card Verifiable certificates (CVC BSI TR-03110 used by <a href="guides.html#Using%20CVC%20CAs%20for%20EU%20EAC%20ePassports">EU EAC ePassports</a>).</li> 
+<li>Support for Hardware Security Modules (HSMs). Built in support for Thales/nCipher, SafeNet Luna, SafeNet ProtectServer, Utimaco CryptoServer, AEP Keyper, ARX CoSign, PrimeCardHSM and other HSMs with a good PKCS#11 library.</li>
+<li>Individual enrollment or batch production of certificates.</li>
+<li>Server and client certificates can be exported as PKCS12, JKS or PEM.</li>
+<li>Browser enrollment with Firefox, IE, etc.</li>
+<li>Enrollment for other applications through open APIs and tools.</li>
+<li>Enrollment generating complete OpenVPN installers for VPN users.</li>
+<li>Mobile enrollment, i.e. iOS using <a href="adminguide.html#Tested devices">SCEP</a>.</li>
+<li><a href="http://www.3gpp.org/">3GPP</a>, i.e. LTE/4G, compatible PKI.</li>
+<li>Revocation and Certificate Revocation Lists (CRLs).</li>
+<li>CRL creation and URL-based CRLDistribution Points according to RFC5280.</li> 
+<li>Smart card logon certificates.</li>
+<li>Configurable certificate profiles for different types and contents of certificates.</li>
+<li>Standard and custom certificate extensions supported.</li>
+<li>Supports the Simple Certificate Enrollment Protocol (<a href="adminguide.html#Scep">SCEP</a>).</li>
+<li>Qualified Certificate Statement (RFC3739) for issuing EU/ETSI qualified certificates.</li>
+<li>Supports the Online Certificate Status Protocol (<a href="architecture-ocsp.html">OCSP</a> - RFC2560 and RFC5019), including AIA-extension.</li>
+<li>Supports RFC4387 for distribution of CA certificates and CRLs over HTTP.</li>
+<li>Validation Authority service serving OCSP responses (RFC2560/5019), CA certificates and CRLS (RFC4387).</li> 
+<li>Supports <a href="adminguide.html#CMP">CMP</a> (RFC4210 and RFC4211).</li>
+<li>Supports synchronous XKMS version 2 requests.</li>
+<li>Key recovery to store private keys for recovery for selected users and certificates.</li>
+</ul>    
+</subsection>
+  <subsection name="ePassport PKI features">
+<ul>
+<li>Support for BAC PKI, Country Signing CA (CSCA) and Document Signer (DS) certificates.</li>
+<li>Integration with <a href="http://www.signserver.org" target="signserver">SignServer</a> as Document Signer creating Security Objects (SOD).</li>
+<li>Support for EAC PKI, Country Verifying CA (CVCA) and Document Verifiers (DV) issuing Inspection System (IS) certificates.</li>
+<li>Integration with PrimeKey SPOC for a Single Point of Contact between countries.</li>
+<li>Publisher for ICAO PKD, publishing DS certificates and CSCA CRLs to ICAO PKD LDAP directory.</li> 
+</ul>
+  </subsection>  
+  <subsection name="Integration features">
+<ul>
+<li>Built on the JEE 5 (EJB 3.0) specification.</li>
+<li>Flexible, component based architecture.</li>
+<li>Run standalone or integrated in any JEE application.</li>
+<li>External Validation Authority and OCSP responder also works with any other CA than EJBCA and support large scale OCSP deployments.</li>
+<li>Validation Authority and OCSP responder can run integrated with EJBCA or stand alone (clustered) for security, high-performance and high-availability.</li>
+<li>Simple OCSP client in pure java.</li>
+<li><a href="adminguide.html#EJBCA%20Plugins">Plug-in functionality</a> allowing you to enhance with your own functionality and work flows.</li>
+<li>Web service (WS) interface for remote administration and integration.</li>
+<li>Command line interface for scripts etc.</li>
+<li>Administration GUI localizable and available in several languages - Japaneese, English, French, German, Italian, Portuguese, Spanish, Chinese, ...</li>
+<li>Internal log messages are localizable for different languages.</li>
+<li>Component- and plug-in based architecture for publishing certificates and CRLs to different sources.</li>
+<li>API for an external RA, restricting in-bound traffic to CA.</li>
+<li>Hard token module for integrating with hard token issuing system (smart cards).</li>
+</ul>
+  </subsection>
+  <subsection name="Administration features">
+<ul>
+<li>Simple installation and configuration.</li>
+<li>Administration thrugh Web GUI, command line or Web Services.</li>
+<li>Powerful Web based administration GUI using strong authentication.</li>
+<li>Configurable entity profiles for different types of users.</li>
+<li>Notification system for e-mail notification to users and administrators when a user is added or certificates expire etc.</li>
+<li>Random or manual password for initial user authentication.</li>
+<li>Multiple levels of administrators with specified privileges and roles.</li>
+<li>Stores Certificates and CRLs in SQL database, LDAP and/or other custom data source.</li>
+<li>OCSP transaction logging suitable for statistics and billing.</li>
+<li>Optional multiple publishers for publishing certificates and CRLs in LDAP or legacy databases. Several flexible standard publishers exist to meet different demands.</li>
+<li>Supports authentication and publishing of certificates to Microsoft Active Directory.</li>
+<li>Optional approval mechanism so several admins are required to perform an action, a.k.a. dual-authentication.</li>
+<li>Component based architecture for various authorization methods of entities when issuing certificates.</li>
+<li>Simple stand-alone <a href="userguide.html#EJBCA%20Batch%20Enrollment%20GUI">batch enrollment GUI</a> for CSRs (webservice RA).</li>
+<li>Possibility for autoenrollment (albeit not using windows standard autoenroll).</li>
+<li>Easy upgrade paths when new versions are released.</li>
+</ul>
+  </subsection>
+  <subsection name="System features">
+<ul>
+<li>High performance and capacity, issue hundreds of certificates per second, store hundreds of millions of certificates.</li>
+<li>Stress test and performance measuring tools in <a href="userguide.html#EJBCA%20client%20toolbox">client toolbox</a>.</li>
+<li>Using standard, high performance RDBMS for storage.</li>
+<li>Supports different architectures; all-in-one, clustered, external RA, external OCSP, etc.</li>
+<li>Possible to integrate into large java applications for optimal integration into business process.</li>
+<li>Deploys easily in a clustered, high availability environment.</li>
+<li>Health check monitoring service to support efficient clustering and monitoring.</li>
+<li>Supports multiple application servers: JBoss, Glassfish and to some extent WebLogic</li>
+<li>Supports multiple databases: Hypersoniq, MySQL, PostgreSQL, Oracle, DB2, Ingres, MS SQL Server, Derby, Sybase, Informix.</li>
+<li>Unique possibility to configure either as fully audited CA or as high speed <a href="adminguide.html#Throw%20away%20CA">certificate factory</a>, with the same level of management features.</li>
+</ul>
+  </subsection>
+  <subsection name="Enterprise Edition features">
+<ul>
+<li>Common Criteria EAL4+ and CWA 14167 certified.</li>
+<li>Integrity protected <a href="adminguide.html#Logging">audit log</a> (log signing), with digital signature or HMAC protection.</li>
+<li>Full database integrity protection of all tables, to detect database manipulation.</li>
+<li>Certified access control and authorization module, for assurance and high trust role separation.</li>
+<li>Authentication of local CLI users enabling role separation also for local CLI.</li>
+<li>Penetration tested with improved security.</li>
+</ul>
+  </subsection>
+  </section>
+
+</body>
+</document>
+

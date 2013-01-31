@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<document>
+
+  <properties>
+    <title>Download</title>
+  </properties>
+
+<body>
+  <section name="Latest Release">
+    <note>
+    If you have problems with any of the download links below, try to download through the Sourceforge <a href="http://sourceforge.net/projects/ejbca/files/">download page</a>.
+    <br/><br/>
+    EJBCA 4.0.13 is now available for <a
+    href="http://sourceforge.net/projects/ejbca/files/ejbca4/ejbca_4_0_13/ejbca_4_0_13.zip">download</a>.
+    <br/>
+    SHA1 checksum: 
+    <br/><br/>
+    Cert-cvc library 1.3.0 with full RSA and ECC support is now available for <a
+    href="http://downloads.sourceforge.net/ejbca/cert-cvc-1.3.0.zip">download</a>.
+    <br/>
+    SHA1 checksum: 56e92f5dd6750d6914c3d516e5d43d027679fa6d
+    </note>
+  </section>
+
+  <section name="Live CD">
+    <p>
+    Get a feeling for EJBCA easily by downloading and running our 
+    <a href="http://download.primekey.se/public/ejbca-live.iso">LiveCD</a>. Requires 1500M of RAM to run.
+    Technical details can be found at <a href="http://wiki.ejbca.org/livecd">wiki.ejbca.org/livecd</a>. 
+    </p>
+    <p>You can order an EJBCA demonstration package with an EJBCA LiveCD and Feitian smart cards <a href="http://www.gooze.eu/ejbca-demonstration-pack">Gooze.eu</a></p>
+  </section>
+
+  <section name="Help and support">
+    <p>
+    You can find both free and commercial support offerings at the <a href="contact.html">Contact &amp; Support</a> page.
+    </p>
+  </section>
+
+  <section name="Source packages and older releases">
+    <p>
+    Download any of the source packages from <a href="http://sourceforge.net/projects/ejbca/files/">Sourceforge</a>.
+    </p>
+  </section>
+
+</body>
+</document>
+

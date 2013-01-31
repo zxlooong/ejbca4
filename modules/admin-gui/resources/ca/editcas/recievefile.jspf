@@ -1,0 +1,92 @@
+
+<% 
+  String[] headlines = {"MAKEREQUEST","RECIEVEREQUEST","PROCESSREQUEST","SIGNREQUEST","MAKEREQUEST"};
+  String[] helptexts = {"MAKEREQUEST_FILEPATH","RECIEVEREQUEST_FILEPATH","PROCESSREQUEST_FILEPATH","PROCESSREQUEST_FILEPATH","MAKEREQUEST_FILEPATH"};
+  String[] buttontexts = {"MAKEREQUEST","RECIEVEREQUEST","PROCESSREQUEST","SIGNREQUEST","MAKEREQUEST"};
+  String[]  actions     = { ACTION_MAKEREQUEST, ACTION_RECEIVERESPONSE, ACTION_PROCESSREQUEST, ACTION_SIGNREQUEST, ACTION_MAKECROSSREQUEST};
+
+  row = 0;
+%>
+<body > 
+<script type="text/javascript">
+<!--  
+
+function check()
+{  
+  
+  if ( (document.recievefile.<%= FILE_RECIEVEFILE %>.value == '') && (document.recievefile.nofile.checked == 0) ){   
+     alert("<%= ejbcawebbean.getText("YOUMUSTSELECT", true) %>"); 
+   }else{  
+     return true;  
+   }
+  
+   return false;
+}
+-->
+</script>
+
+<div align="center">
+   <h2><%= ejbcawebbean.getText(headlines[filemode]) %></h2>
+   <h3><%= ejbcawebbean.getText("CANAME")+ " : "%><c:out value="<%= caname %>"/></h3>
+</div>
+
+  <form name="recievefile" action="<%= THIS_FILENAME %>" method="post" enctype='multipart/form-data' >
+    <input type="hidden" name='<%= ACTION %>' value='<%=actions[filemode] %>'>
+    <input type="hidden" name='<%= HIDDEN_CAID %>' value='<c:out value="<%= caid %>"/>'>
+    <input type="hidden" name='<%= HIDDEN_CANAME %>' value='<c:out value="<%= caname %>"/>'>
+    <input type="hidden" name='<%= HIDDEN_ACTIVATEAUTHCODE %>' value='<c:out value="<%= activateauthenticationcode %>"/>'>
+  <table class="action" width="100%" border="0" cellspacing="3" cellpadding="3">
+    <tr id="Row<%=row++%2%>">
+      <td width="45%" valign="top">
+        &nbsp;
+      </td>
+      <td width="55%" valign="top" align="right">
+        <a href="<%=THIS_FILENAME %>"><%= ejbcawebbean.getText("BACKTOCAS") %></a>
+   <!--     <a onclick='displayHelpWindow("<%= ejbcawebbean.getHelpfileInfix("ca_help.html") + "#cas"%>")'>
+        <%= ejbcawebbean.getText("HELP") %></a> -->
+      </td>
+    </tr>
+    <tr  id="Row<%=row%2%>">
+      <td width="45%" valign="top" align="right"><%= ejbcawebbean.getText(helptexts[filemode]) %>
+        <%= ejbcawebbean.getHelpReference("/userguide.html#Creating%20a%20SubCA%20signed%20by%20an%20external%20CA") %>
+      </td>
+      <td width="55%" valign="top">
+        <input type="file" name="<%= FILE_RECIEVEFILE %>" size="40" />
+      </td>
+    </tr>
+    
+      <% if ( (filemode == 0) || (filemode == 4) ) { // ACTION_MAKEREQUEST || ACTION_MAKECROSSREQUEST %>
+    <tr id="Row<%=row++%2%>">
+      <td width="45%" valign="top" align="right">&nbsp;
+      </td>
+      <td width="55%" valign="top">
+        <input type="checkbox" name="nofile" value="false"
+               id="nofile" />
+        <label for="nofile"><c:out value="<%= ejbcawebbean.getText(\"NOCACERTFILE\") %>" /></label>
+      </td>
+    </tr>
+      <% } else { %>
+           <input type="hidden" name="nofile" value="false" />
+      <% } %>
+      
+    <tr id="Row<%=row++%2%>">
+      <td width="45%" valign="top" align="right">&nbsp;
+      </td>
+      <td width="55%" valign="top">
+        <% if (filemode == 3) { // ACTION_SIGNREQUEST %>
+           <input type="checkbox" name="<%=CHECKBOX_USEPREVIOUSKEY%>" value="<%=CHECKBOX_VALUE%>"
+                  id="<%=CHECKBOX_USEPREVIOUSKEY%>" />
+           <label for="<%=CHECKBOX_USEPREVIOUSKEY%>"><c:out value="<%= ejbcawebbean.getText(\"USEPREVIOUSKEY\") %>" /></label>
+           <br />
+           <input type="checkbox" name="<%=CHECKBOX_CREATELINKCERT%>" value="<%=CHECKBOX_VALUE%>"
+                  id="<%=CHECKBOX_CREATELINKCERT%>" />
+           <label for="<%=CHECKBOX_CREATELINKCERT%>"><c:out value="<%= ejbcawebbean.getText(\"CREATELINKCERT\") %>" /></label>
+           <br />
+        <% } %>
+        <input type="submit" name="<%= BUTTON_RECIEVEFILE %>" onClick='return check()' value="<%= ejbcawebbean.getText(buttontexts[filemode]) %>" >
+		&nbsp;&nbsp;&nbsp;
+        <input type="submit" name="<%= BUTTON_CANCEL %>" value="<%= ejbcawebbean.getText("CANCEL") %>">
+      </td>
+    </tr>
+  </table>
+  </form>

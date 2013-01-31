@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="propertyDefaults">
+    <description>
+            This file sets the property defaults. Included from other files. 
+    </description>
+
+	
+	<!--
+		Merge custom modifications from customejbca.home to
+		ejbca.home before reading the other configuration files.
+	-->
+    <property file="${ejbca.home}/conf/custom.properties" />
+    <property name="customejbca.home" location="${ejbca.home}/../ejbca-custom" />
+    <available file="${customejbca.home}" type="dir" property="customejbca.present" />
+    <condition property="customejbca.message" else="No custom changes to merge."
+    	value="Merging available external modifications from ${customejbca.home} (unless done previously).">
+    	<isset property="customejbca.present" />
+    </condition>
+    <condition property="customejbca.extensions" value="*" else="none-at-all">
+    	<isset property="customejbca.present" />
+    </condition>
+    <condition property="customejbca.dir" value="${customejbca.home}" else="${ejbca.home}/conf">	<!-- This is just any dir that we know exists to avoid error messages.. -->
+    	<isset property="customejbca.present" />
+    </condition>
+	<ant antfile="${ejbca.home}/echo.xml" target="customejbca.message"/>
+	<copy todir="${ejbca.home}" overwrite="true" failonerror="false">
+		<fileset dir="${customejbca.dir}">
+			<include name="**/*.${customejbca.extensions}" unless="runoncesetup.hasrun"/>
+			<exclude name="**/*" if="runoncesetup.hasrun"/>
+   		</fileset>
+	</copy>
+	<!-- this property ensures that the copy operation is only made once -->
+	<property name="runoncesetup.hasrun" value="true"/>
+
+	<!--
+		Prepare for possible EJBCA plugins that should built and merged into the EAR
+		file.
+	-->
+    <property name="ejbca.plugin.gen.path" location="${tmp}/plugin-gen"/>
+    <property name="ejbca.plugin.tmp.path" location="${tmp}/plugin-tmp"/>
+	<property name="ejbca.plugin.conf.path" location="${ejbca.home}/conf/plugins"/>
+    <pathconvert property="ejbca.plugin.collection" setonempty="false">
+        <path>
+            <fileset dir="${ejbca.plugin.conf.path}" includes="*.properties" />
+        </path>
+    </pathconvert>
+
+	<!-- Load property files -->
+    <property file="${ejbca.home}/conf/ejbca.properties" />
+    <property file="${ejbca.home}/conf/install.properties"/>
+    <property file="${ejbca.home}/conf/protection.properties" />
+    <property file="${ejbca.home}/conf/database.properties" />
+    <property file="${ejbca.home}/conf/mail.properties" />
+    <property file="${ejbca.home}/conf/ocsp.properties" />
+    <property file="${ejbca.home}/conf/web.properties" />
+    <property file="${ejbca.home}/conf/cmp.properties" />
+    <property file="${ejbca.home}/conf/jaxws.properties" />
+    <property file="${ejbca.home}/conf/xkms.properties" />
+    <property file="${ejbca.home}/conf/externalra.properties" />
+    <property file="${ejbca.home}/conf/scep.properties" />
+    <property file="${ejbca.home}/conf/externalra-gui.properties" />
+    <property file="${ejbca.home}/conf/certstore.properties" />
+    <property file="${ejbca.home}/conf/crlstore.properties" />
+    <property file="${ejbca.home}/conf/va.properties" />
+    <property file="${ejbca.home}/conf/va-publisher.properties" />
+
+    <!-- httpsserver.hostname must be set cause it's used in preprocess. It will only be set here if not set in any property file -->
+    <property name="httpsserver.hostname" value="localhost"/>
+
+    <!-- A little special something to handle backward compatibility with 
+         people using JBOSS_HOME. They can switch to APPSRV_HOME now, and both will work. 
+    -->        
+    <condition property="jboss.home" value="${env.JBOSS_HOME}" >
+        <equals arg1="${appserver.home}" arg2="${appserver.home}"/>
+    </condition>
+    <condition property="appserver.home" value="${env.APPSRV_HOME}" else="${jboss.home}">
+        <contains string="${jboss.home}" substring="JBOSS_HOME"/>
+    </condition>
+	
+	<!-- Auto-detect supported application server type -->
+	<available file="${appserver.home}/client/jboss-appclient.jar" property="appserver.type" value="jboss"/>
+	<available file="${appserver.home}/client/cxf-api.jar" property="appserver.subtype" value="jboss6"/>
+	<available file="${appserver.home}/lib/javaee.jar" property="appserver.type" value="glassfish"/>
+	<available file="${appserver.home}/wlserver_10.3/server/lib/wlclient.jar" property="appserver.type" value="weblogic"/>
+	<available file="${appserver.home}/lib/commandlineutils.jar" property="appserver.type" value="websphere"/>
+	<!-- Not yet tested:
+		<available file="${appserver.home}/bin/server.jar" property="appserver.type" value="geronimo"/>
+	-->
+	<property name="appserver.type.detected.errormessage"
+		value="'appserver.type' could not be detected or is not configured. Glassfish 2.1.1, JBoss 5.1.0.GA, JBoss 6.0.0, WebLogic 10.3.3, WebSphere 7.0.0.13 can be detected. (Is 'appserver.home' configured?)"/>
+	<ant antfile="${ejbca.home}/echo.xml" target="appserver.error.message"/>
+	
+	<condition property="bundle-hibernate-jpa">
+		<or>
+			<matches pattern="glassfish" string="${appserver.type}"/>
+			<matches pattern="weblogic" string="${appserver.type}"/>
+			<matches pattern="websphere" string="${appserver.type}"/>
+			<!-- ... -->
+		</or>
+	</condition>
+
+	<condition property="exclude-xerces">
+		<or>
+			<matches pattern="jboss6" string="${appserver.subtype}"/>
+			<matches pattern="glassfish" string="${appserver.type}"/>
+			<!-- ... -->
+		</or>
+	</condition>
+
+	<condition property="exclude-xalan">
+		<or>
+			<matches pattern="jboss6" string="${appserver.subtype}"/>
+			<!-- ... -->
+		</or>
+	</condition>
+
+	<condition property="exclude-serializer">
+		<or>
+			<matches pattern="jboss6" string="${appserver.subtype}"/>
+			<!-- ... -->
+		</or>
+	</condition>
+
+	<!-- Automatically determine DataSource JNDI name prefix from application server type -->
+	<condition property="datasource.jndi-name-prefix" value="java:/"><equals arg1="jboss" arg2="${appserver.type}"/></condition>
+	<condition property="datasource.jndi-name-prefix" value="jdbc/"><equals arg1="glassfish" arg2="${appserver.type}"/></condition>
+	<condition property="datasource.jndi-name-prefix" value=""><equals arg1="weblogic" arg2="${appserver.type}"/></condition>
+	<condition property="datasource.jndi-name-prefix" value="jdbc/"><equals arg1="websphere" arg2="${appserver.type}"/></condition>
+
+	<!-- java.ver is used to select the correct version of bc libraries to include in ear -->   
+	<property name="java.ver" value="16" />
+	<property name="ejbca.productionmode" value="true"/>
+	<property name="ca.tokentype" value="soft"/>
+	<property name="ca.tokenproperties" value=""/>
+    <property name="ocspHardTokenClasses" value="${ejbca.home}/ocspHardTokenClasses"/>
+    <property name="ocsp.hardToken.classes" location="${ocspHardTokenClasses}"/>
+    <property name="ocsp.defaultresponder" value="CN=AdminCA1,O=EJBCA Sample,C=SE"/>
+    <property name="ocsp.signaturealgorithm" value="SHA1WithRSA;SHA1WithECDSA;SHA1WithDSA"/>
+	<property name="datasource.jndi-name" value="EjbcaDS" />
+	<property name="database.name" value="hsqldb" />
+	<property name="database.url" value="jdbc:hsqldb:$${jboss.server.data.dir}$${/}hypersonic$${/}localDB" />
+	<property name="database.driver" value="org.hsqldb.jdbcDriver" />
+	<property name="database.username" value="sa" />
+	<property name="weblogic-oracle-columntype" value="" />
+	<property name="mail.jndi-name" value="java:/EjbcaMail" />
+	<property name="mail.from" value="ejbca-donotreply@domain.com" />
+	<property name="mail.user" value="ejbca_user" />
+	<property name="mail.password" value="" />
+	<property name="mail.pop3.host" value="localhost" />
+	<property name="mail.smtp.host" value="localhost" />
+	<property name="mail.smtp.port" value="25" />
+	<property name="mail.smtp.auth" value="false" />
+	<property name="mail.smtp.starttls.enable" value="false" />
+	<property name="mail.debug" value="false" />
+	<property name="httpserver.pubhttp" value="8080" />
+	<property name="httpserver.pubhttps" value="8442" />
+	<property name="httpserver.privhttps" value="8443" />
+	<property name="httpsserver.bindaddress.pubhttp" value="0.0.0.0" />
+	<property name="httpsserver.bindaddress.pubhttps" value="0.0.0.0" />
+	<property name="httpsserver.bindaddress.privhttps" value="0.0.0.0" />
+	<property name="web.contentencoding" value="UTF-8" />
+	<property name="web.docbaseuri" value="internal" /> <!-- Default used to determine if to build or not.. -->
+	<property name="web.renewalenabled" value="false" />
+	<condition property="doc.war.enabled">
+		<equals arg1="internal" arg2="${web.docbaseuri}" casesensitive="false" trim="true" />
+	</condition>
+	<condition property="renew.war.enabled">
+		<equals arg1="true" arg2="${web.renewalenabled}" casesensitive="false" trim="true" />
+	</condition>
+	<condition property="cmptcpservices.enabled">
+		<istrue value="${cmp.tcp.enabled}"/>
+	</condition>
+
+	<property name="ocsp.enabled" value="true" />
+	<property name="certstore.enabled" value="false" />
+	<property name="crlstore.enabled" value="false" />
+	<property name="crlstore.contextroot" value="/crls" />
+	<property name="certstore.contextroot" value="/certificates" />
+	<property name="ocsp.contextroot" value="/ejbca/publicweb/status" />
+
+	<!-- CMP settings -->
+	<property name="cmp.allowraverifypopo" value="false" />
+	<property name="cmp.defaultca" value="" />
+	<property name="cmp.extractusernamecomponent" value="" />
+	<property name="cmp.operationmode" value="normal" />
+	<property name="cmp.responseprotection" value="signature" />
+	<property name="cmp.ra.authenticationsecret" value="" />
+	<property name="cmp.ra.namegenerationscheme" value="DN" />
+	<property name="cmp.ra.namegenerationparameters" value="CN" />
+	<property name="cmp.ra.namegenerationprefix" value="" />
+	<property name="cmp.ra.namegenerationpostfix" value="" />
+	<property name="cmp.ra.endentityprofile" value="EMPTY" />
+	<property name="cmp.ra.certificateprofile" value="ENDUSER" />
+	<property name="cmp.ra.caname" value="AdminCA1" />
+	<property name="cmp.tcp.enabled" value="false" />
+	<property name="cmp.tcp.portno" value="829" />
+	<property name="cmp.tcp.logdir" value="./log" />
+	<property name="cmp.tcp.conffile" value="" />
+	
+	<!-- XKMS settings -->
+	<property name="xkms.enabled" value="false" />				
+	<property name="xkms.serviceport" value="8080" />
+
+	<!-- WS settings -->
+	<property name="ejbcaws.enabled" value="true" />
+	
+	<!-- Specify Hibernate dialect -->
+	<condition property="hibernate.dialect" value="org.hibernate.dialect.DB2Dialect"><equals arg1="${database.name}" arg2="db2"/></condition>
+	<condition property="hibernate.dialect" value="org.hibernate.dialect.DerbyDialect"><equals arg1="${database.name}" arg2="derby"/></condition>
+	<condition property="hibernate.dialect" value="org.hibernate.dialect.HSQLDialect"><equals arg1="${database.name}" arg2="hsqldb"/></condition>
+	<condition property="hibernate.dialect" value="org.hibernate.dialect.InformixDialect"><equals arg1="${database.name}" arg2="informix"/></condition>
+	<condition property="hibernate.dialect" value="org.hibernate.dialect.IngresDialect"><equals arg1="${database.name}" arg2="ingres"/></condition>
+	<condition property="hibernate.dialect" value="org.hibernate.dialect.SQLServerDialect"><equals arg1="${database.name}" arg2="mssql"/></condition>
+	<condition property="hibernate.dialect" value="org.hibernate.dialect.MySQLDialect"><equals arg1="${database.name}" arg2="mysql"/></condition>
+	<condition property="hibernate.dialect" value="org.hibernate.dialect.Oracle10gDialect"><equals arg1="${database.name}" arg2="oracle"/></condition>
+	<condition property="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"><equals arg1="${database.name}" arg2="postgres"/></condition>
+	<condition property="hibernate.dialect" value="org.hibernate.dialect.SybaseDialect"><equals arg1="${database.name}" arg2="sybase"/></condition>
+	<fail unless="hibernate.dialect" message="Unsupported database type '${database.name}'."/>
+
+	<target name="display-properties" description="Show current configuration">
+        <echo>
+---------- ${app.version} CONFIGURATION PROPERTIES ----------
+appserver.type           = ${appserver.type}
+appserver.home           = ${appserver.home}
+ocsp.defaultresponder    = ${ocsp.defaultresponder}
+ocsp.signaturealgorithm  = ${ocsp.signaturealgorithm}
+datasource.jndi-name     = ${datasource.jndi-name}
+datasource.jndi-name-prefix = ${datasource.jndi-name-prefix}
+database.name            = ${database.name}
+database.url             = ${database.url}
+database.driver          = ${database.driver}
+database.username        = ${database.username}
+database.password        = ${database.password}
+weblogic-oracle-columntype = ${weblogic-oracle-columntype}
+mail.jndi-name           = ${mail.jndi-name}
+mail.from                = ${mail.from}
+mail.user                = ${mail.user}
+mail.password            = ${mail.password}
+mail.smtp.host           = ${mail.smtp.host}
+mail.smtp.port           = ${mail.smtp.port}
+mail.smtp.auth           = ${mail.smtp.auth}
+mail.debug               = ${mail.debug}
+httpserver.pubhttp	     = ${httpserver.pubhttp}
+httpserver.pubhttps	     = ${httpserver.pubhttps}
+httpserver.privhttps     = ${httpserver.privhttps}
+httpsserver.hostname     = ${httpsserver.hostname}
+httpsserver.password     = ${httpsserver.password}
+web.contentencoding      = ${web.contentencoding}
+web.renewalenabled       = ${web.renewalenabled}
+ejbcaws.enabled          = ${ejbcaws.enabled}
+cmp.allowraverifypopo           = ${cmp.allowraverifypopo}
+cmp.defaultca                   = ${cmp.defaultca}
+cmp.extractusernamecomponent    = ${cmp.extractusernamecomponent}
+cmp.operationmode               = ${cmp.operationmode}
+cmp.responseprotection          = ${cmp.responseprotection}
+cmp.ra.authenticationsecret     = ${cmp.ra.authenticationsecret}
+cmp.ra.namegenerationscheme     = ${cmp.ra.namegenerationscheme}
+cmp.ra.namegenerationparameters = ${cmp.ra.namegenerationparameters}
+cmp.ra.namegenerationprefix     = ${cmp.ra.namegenerationprefix}
+cmp.ra.namegenerationpostfix    = ${cmp.ra.namegenerationpostfix}
+cmp.ra.endentityprofile         = ${cmp.ra.endentityprofile}
+cmp.ra.certificateprofile       = ${cmp.ra.certificateprofile}
+cmp.ra.caname                   = ${cmp.ra.caname}
+cmp.tcp.enabled                 = ${cmp.tcp.enabled}
+cmp.tcp.portno                  = ${cmp.tcp.portno}
+cmp.tcp.logdir                  = ${cmp.tcp.logdir}
+cmp.tcp.conffile                = ${cmp.tcp.conffile}
+xkms.enabled                    = ${xkms.enabled}
+xkms.serviceport                = ${xkms.serviceport}
+      </echo>
+    </target>
+
+	<target name="fail-unless-appserver-detected">
+		<echo message="appserver.home: ${appserver.home}"/>
+		<echo message="appserver.type: ${appserver.type}"/>
+		<fail message="${appserver.type.detected.errormessage}" unless="appserver.type"/>
+	</target>
+	
+</project>

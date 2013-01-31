@@ -1,0 +1,269 @@
+<?xml version="1.0"?>
+<document>
+  <properties>
+    <title>Security</title>
+  </properties>
+<body>
+<section name="EJBCA SECURITY">
+<p>
+Security is CRITICAL for a CA. Protection of the CA's private key is essential,
+since compromise of the CA's private key will let anyone issue false
+certificates, which can then be used to gain access to systems relying on the CA for
+authentication and other security services.
+ </p>
+ <p>
+After realizing this, please read on and take a pragmatic approach to security,
+suitable for your policy, application and environment.
+</p></section>
+
+<section name="Firewall ports">
+<p>To have a functional EJBCA installation there are only two ports that need to be open to the outside:
+<ul>
+<li>8080 - the public HTTP port of you application server, used for clients to access the public web for enrollment.</li>
+<li>8443 - the SSL protected HTTPS port used to access the Admin GUI of EJBCA. This port requires client certificate for access.</li>
+</ul>
+Additional ports that you may need to open are SSH, outgoing SMTP, outgoing LDAP, etc. Which additional ports that need to be opened depends on your specific setup and which 
+services you use. You do not need outgoing SMTP if you don't use email notification, for example.
+</p>
+<p>
+Locally on the host, a number of ports are used in order for your application server to function.
+</p>
+</section>
+
+<section name="Securing JBoss">
+<note>
+Before putting anything on JBoss up on the internet, at least do the following (commands for JBoss 5):
+<ul>
+<li>rm /opt/jboss/server/default/deploy/jmx-console.war/ -R</li>
+<li>rm /opt/jboss/server/default/deploy/management/ -R</li>
+<li>rm /opt/jboss/server/default/deploy/ROOT.war/ -R</li>
+<li>rm /opt/jboss/server/default/deploy/http-invoker.sar/ -R</li>
+<li>rm /opt/jboss/server/default/deploy/admin-console.war/ -R</li>
+</ul>
+</note>
+<p>
+JBoss has a description how to secure a default installation of JBoss. You should read this document before putting
+your application in production.
+</p><p>
+Check out: <a href="http://community.jboss.org/wiki/SecureJBoss">SecureJBoss</a>
+</p>
+<p>You should also make sure all sensitive files can only be read by the JBoss user. These files are for example the server.xml 
+file where the password for the SSL keystores are stored.
+</p>
+</section>
+
+<section name="Setting up SSL">
+<p>
+To set upp SSL communication for all HTTP traffic to the server 
+follow the instructions for installing EJBCA, this will set up HTTPS 
+for the admin-GUI automatically.
+ </p><p>
+This will set up an SSL port open for the public at 8442 and an SSL port
+which require client certificate to access the Admin GUI at 8443.
+</p>
+</section>
+
+<section name="Configuring for security">
+<p>
+The easiest way to keep the installation secure is to block all default JBOSS ports
+ (1099, 1476, 4444, 8082, 8083) from the outside and only allow traffic to Tomcat ports (8442 and 8443).
+This is because the public end-user actions can be performed through the public
+servlets, while administration tasks are performed directly on the beans.
+</p>
+<p>
+See 'ejbcafirewall.sh' for an example how to configure an Iptables firewall in
+Linux for protecting EJBCA running on JBoss.
+</p>
+<p>
+See <a href="http://www.jboss.org/">JBoss documentation</a> for a list of ports used in JBoss, for information about
+ security in JBOSS/EJB and for how to set up SSL with JBOSS.
+See this <a href="http://www.javaworld.com/javaworld/jw-08-2001/jw-0831-jaas_p.html">JavaWorld article</a> for more
+ examples about setting up role-permissions.
+</p>
+</section>
+
+<section name="File permission">
+<p>
+The application server should be run as a special user. Files should be protected 
+so the ONLY the user running the application server can access them. 
+</p><p>
+By default JBoss is probably unpacked with read access to all, you should issue:
+</p>
+<source>
+umask 077
+chmod -R go-rwx *
+</source>
+<p>
+In the JBOSS_HOME directory, to make the files readable only by the jboss user, and make this the default permission
+for files copied here.
+</p>
+<p>
+If PKCS12 files are generated for users, the subdirectory ('p12') where
+they are stored and the generated files should be protected in the same way.
+</p></section>
+
+<section name="User authentication">
+<p>
+Default user authentication for enrollment in EJBCA is done with a one-time
+password scheme. When a user has enrolled for a certificate his status is
+set to GENERATED and the password can not be used again to enroll for a new
+certificate. An administrator must re-set the user's status and preferably
+set a new password.
+</p>
+
+<p>If you are exposing your public web pages to a wider audience there are a few functions you can use in order to counter perceived threats such as brute-force attacks.
+</p>
+<ul>
+<li>Enable password expiry using the <a href="adminguide.html#Currently%20Available%20Services">User Password Expire Service</a>. If a user forgets to use his/her one-time password it will be automatically disabled.</li>
+<li>Use password expiry with the <a href="userguide.html#Maximum%20number%20of%20failed%20login%20attempts">Maximum number of failed login attempts</a> setting when registering users.</li>
+<li>Increase the number of BCrypt rounds, making password hashing slower. See the setting of ejbca.passwordlogrounds in conf/ejbca.properties.sample.</li>
+</ul>
+
+<p>
+If implementing other user authentication scenarios you should remember
+that certificate authentication is stronger than password based
+authentication (for example LDAP). If EJBCA users authenticate 
+with some other (not one-time) password instead of usual one-time password, 
+a strong authentication mechanism will be built on a weaker one.
+</p></section>
+
+<section name="Passwords defined when configuring EJBCA.">
+<p>
+The configuration files (in $EJBCA_HOME/conf) contain some passwords.
+It is not considered to be a security risk to declare all these passwords
+in clear text. Anyone that can log on to the server with EJBCA can, apart from
+reading these files, also do anything he wants with the CLI of EJBCA. If an unauthorized
+person can use the CLI, then this is a severe security risk. Access to these passwords
+is itself not much of a problem, since they have no use outside of the server
+</p><p>
+It is very important to restrict the access to the server to only a very few trusted individuals.
+</p><p>
+If you anyway want to do something about these passwords the subsections of this section
+describes what should be done:
+</p>
+<subsection name="Passwords used by EJBCA taken from property files">
+<p>
+Some of the passwords are used directly by EJBCA code.
+All these passwords may be configured encrypted in the same way as
+<a href="adminguide.html#Auto-activation of CA tokens">PINs used for auto activation could be encrypted</a>.
+</p>
+<p>
+List of these passwords in ejbca.properites :
+<br/>ca.tokenpassword
+<br/>ca.keystorepass
+<br/>ca.ocspkeystorepass
+<br/>ca.xkmskeystorepass
+<br/>ca.cmskeystorepass
+</p><p>
+List of these passwords in protectedlog.properties :
+<br/>protectionTokenKeyStorePassword
+</p>
+</subsection>
+<subsection name="Passwords used by the application server">
+<p>
+Some of the passwords are not used by EJBCA but by the application server. If these passwords
+should be encrypted, it must be in a way so that they can be decrypted by the application
+server. You have to consult the documentation of the application server to find out how to
+encrypt them (example: <a href="#Datasource passwords">datasource password in jboss</a>).
+</p><p>
+These passwords are:
+<br/>mail.password in mail.properties
+<br/>database.password in database.properties
+</p>
+</subsection>
+<subsection name="Passwords prompted for by 'ant install'">
+<p>
+If you don't define superadmin.password in web.properties, then 'ant install' will prompt for it.
+Since this password does not has to be known by EJBCA after the super admin token has been created,
+it will not exist in any file after the installation.
+</p>
+<p>
+The passwords java.trustpassword and httpsserver.password, also in web.properties, are used to generate
+keystore files at 'ant install'. If either of these passwords are not predefined, then they will be
+prompted for during bootstrap, install, and deploy. </p><p>
+If you let 'ant' prompt for these passwords you must set them (encrypted, if possible)
+in the application server configuration. The file for the application server is copied to the application
+server at 'ant deploy' (e.g. jboss-5.1.0.GA/server/default/deploy/jbossweb.sar/server.xml)
+You must then manually substitute the strings 'changeThisToThePassword' in the configuration file with clear
+text or possible encrypted (application server specific) passwords.
+</p>
+</subsection>
+</section>
+<section name="Datasource passwords">
+<p>
+If you do not like to have your DataSource password available in clear text in EjbcaDS.xml, 
+there is an article in the JBoss Wiki about encrypting them:
+<br/>
+<a href="http://community.jboss.org/wiki/encryptingdatasourcepasswords">
+http://community.jboss.org/wiki/encryptingdatasourcepasswords</a>
+</p>
+</section>
+
+<section name="Database privileges">
+<p>
+During the installation process of EJBCA, JBoss creates all the required database
+tables. To do this the EJBCA-database user has to have CREATE TABLE privileges. During
+upgrades EJCBA needs CREATE and ALTER TABLE privileges. (SELECT, UPDATE, INSERT and DELETE
+privileges are also required.)
+</p><p>
+After the installation during normal operations only regular SELECT, UPDATE, INSERT
+and DELETE commands are needed. The table LogEntryData will only be used with SELECT and
+INSERT.
+</p><p>
+Instead of changing the privileges of the EJBCA-user, it's recommended to have two
+different users "ejbca" and "ejbca-admin". For regular operations "ejbca" is used, but
+for the installation and upgrades, EJBCA is re-deployed with "ejbca-admin" configured
+in conf/database.properties. 
+</p>
+<p>There is a script, <b>doc/howto/mysql-privileges.sh</b> that creates an SQL script that can be run to limit privileges
+on a MySQL database. The script will set restricted privileges for every table in the EJBCA database.
+See the script for in-line documentation.</p>
+</section>
+
+<section name="SSL connections in MySQL">
+<p>
+<a href="http://dev.mysql.com/doc/refman/5.0/en/secure-using-ssl.html">
+http://dev.mysql.com/doc/refman/5.0/en/secure-using-ssl.html</a>
+<a href="http://dev.mysql.com/doc/refman/5.1/en/secure-using-ssl.html">
+http://dev.mysql.com/doc/refman/5.1/en/secure-using-ssl.html</a>
+</p>
+</section>
+
+<section name="Other precautions">
+<subsection name="Switching to production mode">
+<p>
+Switching to production mode by setting ejbca.productionmode in conf/ejbca.properties
+will prevent ant from starting JUnit tests and deploying the CA build on an OCSP responder
+and vice versa.   
+</p>
+</subsection>
+<subsection name="Database transaction logs in MySQL">
+<p>
+<a href="http://dev.mysql.com/doc/refman/5.0/en/binary-log.html">
+http://dev.mysql.com/doc/refman/5.0/en/binary-log.html</a>
+</p>
+</subsection>
+<subsection name="System accounting in Linux">
+<p>
+See your distribution for details about their package, below are general links.
+<br/>
+<a href="http://www.nic.com/~dave/SecurityAdminGuide/SecurityAdminGuide-5.html">
+http://www.nic.com/~dave/SecurityAdminGuide/SecurityAdminGuide-5.html</a>
+<a href="http://www.hsc.fr/ressources/presentations/linux2000/linux2000-18.html.en">
+</a>
+</p>
+</subsection>
+</section>
+<section name="Denial of Service">
+    <subsection name="Due too large data packages">
+        <p>
+            There is no way to limit the datapackages reaching JBoss through a HTTP request from within JBoss. 
+            This is due to the way the TCP protocol works. 
+            The best way to avoid this kind of DOS attacks is to use a firewall or proxy that can limit the size of request and configure it properly.
+        </p>
+    </subsection>
+</section>
+
+</body>
+</document>
+

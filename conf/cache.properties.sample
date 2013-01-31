@@ -1,0 +1,99 @@
+#
+# $Id: cache.properties.sample 9837 2010-09-13 12:31:41Z aveen4711 $
+#
+# This is a sample file to override properties used
+# during development (or deployment) of EJBCA
+# 
+# You should copy and rename this file to cache.properties
+# and customize at will.
+#
+
+
+#------------------- Performance settings -------------
+
+# Caches is used internally by EJBCA to optimize performance. 
+# You can manually flush internal caches using the command line command "ejbca.sh clearcache". Run the command for more detailed documentation of this command.
+ 
+# Set to a value for caching calls to getCAInfo and getCA in CAAdminSession. This means that for CAInfo to be updated
+# the cache time expires, an "Edit CA" or server restart is done, or flushCACache is called on CAAdminSession. 
+# This cache works fine in a single server environment. In a multi server (clustered) environment, 
+# this can be used to disable the check if CA has been edited on another node, so the CA must be edited on all nodes, 
+# or nodes caches flushed after editing on one node.
+# Setting this value will improve performance for very large volume installations (>100 cert/s). 
+# For normal installations, where extreme speeds and response times are not required, leave as default.
+# Value is milliseconds.
+# Default: -1 (don't use cache)
+# Possible values -1 (no caching) to 9223372036854775807 (2^63-1 = Long.MAX_VALUE), 
+#  anything more than 157680000000 (5 years) should mean infinitely in practice.
+#cainfo.cachetime=157680000000
+#cainfo.cachetime=-1
+
+# Set to a value for caching calls to getEndEntityProfile and getEndEntityProfileId/Name in RAAdminSession. This means that for EndEntity profiles to be updated
+# the cache time expires, an "Edit profile" or server restart is done, or flushProfileCache is called on RAAdminSession. 
+# This cache works fine in a single server environment. In a multi server (clustered) environment, 
+# this can be used to disable the check if a profile has been edited on another node, so the profile must be edited on all nodes, 
+# or nodes caches flushed after editing on one node.
+# Setting this value will improve performance for very large volume installations (>100 cert/s). 
+# For normal installations, where extreme speeds and response times are not required, leave as default.
+# Value is milliseconds.
+# Default: 1000 (1 second)
+# Possible values -1 (no caching) to 9223372036854775807 (2^63-1 = Long.MAX_VALUE), 
+#  anything more than 157680000000 (5 years) should mean infinitely in practice.
+#eeprofiles.cachetime=157680000000
+#eeprofiles.cachetime=-1
+
+# Set to a value for caching calls to getCertificateProfile and getCertificateProfileId/Name in StoreSession. This means that for Certificate profiles to be updated
+# the cache time expires, an "Edit profile" or server restart is done, or flushProfileCache is called on StoreSession. 
+# This cache works fine in a single server environment. In a multi server (clustered) environment, 
+# this can be used to disable the check if a profile has been edited on another node, so the profile must be edited on all nodes, 
+# or nodes caches flushed after editing on one node.
+# Setting this value will improve performance for very large volume installations (>100 cert/s). 
+# For normal installations, where extreme speeds and response times are not required, leave as default.
+# Value is milliseconds.
+# Default: 1000 (1 second)
+# Possible values -1 (no caching) to 9223372036854775807 (2^63-1 = Long.MAX_VALUE), 
+#  anything more than 157680000000 (5 years) should mean infinitely in practice.
+#certprofiles.cachetime=157680000000
+#certprofiles.cachetime=-1
+
+# Set to a value for caching calls to loadGlobalConfiguration. This means that for globalConfiguration to be updated
+# the cache time expires, an "Edit configuration" or server restart is done, or flushGlobalConfigurationCache is called on RAAdminSession.
+# This cache works fine in a single server environment. In a multi server (clustered) environment, 
+# this can be used to disable the check if globalconfiguration has been edited on another node, so the configuration must be edited on all nodes, 
+# or nodes caches flushed after editing on one node.
+# Setting this value will improve performance for very large volume installations (>100 cert/s). 
+# For normal installations, where extreme speeds and response times are not required, leave as default.
+# Value is milliseconds.
+# Default: 30000 (30 seconds)
+# Possible values -1 (no caching) to 9223372036854775807 (2^63-1 = Long.MAX_VALUE), 
+#  anything more than 157680000000 (5 years) should mean infinitely in practice.
+#globalconfiguration.cachetime=157680000000
+#globalconfiguration.cachetime=-1
+
+# Set to a value for caching calls to update authorization tree, i.e. load access rules and admin groups. This means that for access rules to be updated
+# the cache time expires, an "Edit administrator privileges" or server restart is done, or flushAuthorizationCache is called on AuthorizationSessionBean.
+# This cache works fine in a single server environment. In a multi server (clustered) environment, 
+# this can be used to disable the check if access rules has been edited on another node, so the configuration must be edited on all nodes, 
+# or nodes caches flushed after editing on one node.
+# Setting this value will improve performance for very large volume installations (>100 cert/s). 
+# For normal installations, where extreme speeds and response times are not required, leave as default.
+# Value is milliseconds.
+# Default: 30000 (30 seconds)
+# Possible values -1 (no caching) to 9223372036854775807 (2^63-1 = Long.MAX_VALUE), 
+#  anything more than 157680000000 (5 years) should mean infinitely in practice.
+#authorization.cachetime=157680000000
+#authorization.cachetime=-1
+
+# Set to a value for caching calls to update log configuration. This means that for log configuration to be updated
+# the cache time expires, an "Edit log configuration" or server restart is done, or flushConfigurationCache is called on LogSessionBean.
+# This cache works fine in a single server environment. In a multi server (clustered) environment, 
+# this can be used to disable the check if access rules has been edited on another node, so the configuration must be edited on all nodes, 
+# or nodes caches flushed after editing on one node.
+# Setting this value will improve performance (very little) for very large volume installations (>100 cert/s). 
+# For normal installations, where extreme speeds and response times are not required, leave as default.
+# Value is milliseconds.
+# Default: 5000 (5 seconds)
+# Possible values -1 (no caching) to 9223372036854775807 (2^63-1 = Long.MAX_VALUE), 
+#  anything more than 157680000000 (5 years) should mean infinitely in practice.
+#logconfiguration.cachetime=157680000000
+#logconfiguration.cachetime=-1

@@ -1,0 +1,197 @@
+<?xml version="1.0"?>
+<document>
+
+  <properties>
+    <title>Home</title>
+  </properties>
+
+<body>
+  <section name="News and Info">
+
+<table class="promotion"><!--AC table for twitterwidget and Note area-->
+
+<tr>
+<td valign="top"><!--TWITTER WIDGET-->
+<div class="frame note" id="twitter" style="border:0;">
+<script charset="utf-8" src="https://widgets.twimg.com/j/2/widget.js">
+</script>
+<script>
+new TWTR.Widget({
+  version: 2,
+  type: 'profile',
+  rpp: 7,
+  interval: 30000,
+  width: 0,
+  height: 0,
+  theme: {
+    shell: {
+      background: '#8ca8d0',
+      color: '#ffffff',
+    },
+    tweets: {
+      background: '#eee',
+      color: '#333',
+      links: '#5e87bb'
+    }
+  },
+  features: {
+    scrollbar: true,
+    loop: true,
+    live: false,
+    behavior: 'all'
+  }
+}).render().setUser('primekeyPKI').start();
+</script>
+</div>
+</td>
+
+<td valign="top">
+<div class="frame note">
+<div class="label"><a style="color:white; padding:1.8em;" href="http://www.primekey.se/PKI+shop/">Learn PKI in Sweden!</a><a style="color:white; padding:1.8em;" href="http://www.primekey.se/services/training/Open+schedule">PKI Training Schedule</a></div>
+<div class="content">
+  <p><strong>EJBCA 4.0.13 is now out!</strong>
+  <br />Visit the <a href="download.html">download</a> section. There is also a LiveCD!
+  <br />
+  <span class="date"> Date: 2012-12-19</span>  
+  </p>  
+  <p><strong>Full EU EAC ePassport support in Cert-cvc 1.3.0!</strong><br />
+  The <a href="download.html">cert-cvc library</a> handles CVC certificates for <a href="cvccas.html">EU EAC ePassport PKI</a> and the current release has full support for EU EAC ePassports using all algorithms.
+<br />
+  <span class="date"> Date: 2012-05-03</span> 
+  </p>
+  <p>
+  <strong>Another EJBCA User Guide!</strong><br />The latest addition is a CMP 3GPP manual. Buy it at the <a href="http://www.primekey.se/PKI+shop/">Prime PKI Shop!</a>
+  <br />
+  <span class="date"> Date: 2012-05-25</span>
+  </p>
+
+  <p><strong>Certified PKI for Customers!</strong><br />
+  5.0 is a Common Criteria EAL4+, and CWA certified EJBCA version. EJBCA 5.0 is available exclusively from <a href="http://www.primekey.se/PKI+shop/">PrimeKey Solutions AB</a>.
+  <br />
+  </p>
+   <p>
+  <strong><a href="http://blog.ejbca.org/2012/05/ejbca-will-always-be-open-source.html">Employees Guarantee Top OS Software Quality...</a><br /><a href="http://blog.ejbca.org/2012/05/new-features-in-ejbca-5.html">EJBCA Enterprise vs Community Features...</a>
+  <br /><a href="http://blog.ejbca.org">Read more News from the EJBCA Blog...</a></strong>
+  </p>
+  <p>
+  </p>
+
+</div>
+</div>
+</td>
+</tr>
+</table>
+
+  </section>
+
+<section name="EJBCA Enterprise PKI">
+<p>
+EJBCA is an enterprise class PKI Certificate Authority built on JEE technology. 
+It is a robust, high performance, platform independent, flexible, and component based CA to be used 
+stand-alone or integrated in other JEE applications.
+</p>
+<p>
+EJBCA is an enterprise class PKI, meaning that you can use EJBCA to build a complete PKI infrastructure for your organization.
+If you only want to issue a few single certificates for testing, there are probably options that will get you started quicker, 
+but if you want a serious PKI we recommend EJBCA.
+</p>
+<p><strong>EJBCA has everything for your trust center. Contact us for more info.</strong>
+</p>
+<p>
+You can use EJBCA to issue certificates for different purposes such as:
+<ul>
+<li>Strong authentication for users accessing your intranet/extranet/internet resources.</li>
+<li>Secure communication with SSL servers and SSL clients.</li>
+<li><a href="howto.html#Microsoft smart card logon">Smart card logon</a> to Windows and/or Linux.</li>
+<li>Signing and encrypting email.</li>
+<li>VPN connections by issuing certificates to your VPN routers such as OpenVPN, Cisco, Juniper etc.</li>
+<li>Client VPN access with certificates in users VPN clients.</li>
+<li>Single sign-on by using a single certificate to secure logon to web applications.</li>
+<li>Creating signed documents.</li>
+<li>Mobile PKI, <a href="adminguide.html#iPhone/iOS">enrolling iOS</a> etc.</li>
+<li>Secure mobile networks, i.e. <a href="http://www.3gpp.org/">3GPP</a>/LTE/4G using the <a href="adminguide.html#CMP">CMP protocol</a>.</li>
+<li>Counterfeit prevention by signing and pairing accessories.</li>
+<li>Issue citizen certificates for access to government resources, used in passports etc.</li>
+<li>Create CVCAs and DVs and issue CV certificates (CVC) to Document Verifiers and Inspection Systems for <a href="cvccas.html">EU EAC ePassports</a>.</li>
+<li>... and many many more ...</li>
+</ul>
+</p>
+<p>
+You can also use EJBCA to set up a CA independent, high performance, highly available OCSP responder service.
+</p>
+<p>Together with sister projects (see <i><a href="complementary.html">Complementary software</a></i>) of EJBCA you can also:
+<ul>
+<li>Get central trusted <a href="http://signserver.org">Time Stamps</a> for you electronically signed documents.</li>
+<li>Perform <a href="http://signserver.org">central signing of documents</a>.</li>
+<li>Sign electronic passport data (MRTD).</li>
+<li>Issue hard tokens (<a href="complementary.html#Hardware%20tokens">smart cards</a>) and manage the complete life cycle of cards and certificates.</li>
+<li>... and many many more ...</li>
+</ul>
+</p>
+</section>
+<section name="Open Source PKI">
+<p>
+This PKI software is OSI Certified Open Source Software.
+OSI Certified is a certification mark of the Open Source Initiative.
+</p>
+<p>
+The source code of EJBCA is hosted on a (mostly) public <a href="https://svn.cesecore.eu/svn/ejbca/branches/">svn</a> and all downloads include the complete source code can be downloaded from <a href="http://www.sf.net/">Sourceforge.net</a>.
+<br></br>
+If you want to contribute to EJBCA, please see <i><a href="donations.html">Contribute to EJBCA</a></i>
+</p>
+</section>
+
+<section name="Support and development">
+<p>Commercial support, development, integration and maintenance for EJBCA is available through <a href="http://www.primekey.se/">PrimeKey Solutions</a>. 
+</p>
+</section>
+
+<section name="Sponsors">
+<p>Here is a list of some of the good organizations that have sponsored development of certain features in EJBCA.
+</p>
+    <p>
+    EJBCA 3.1 and later contains support for nCipher HSM. The development of this functionality was sponsored by 
+    Linagora, <a href="http://www.linagora.com/">www.linagora.com</a>.
+    </p>
+    <p>
+    New features in EJBCA 3.2 such as QC statement and external OCSP responders was sponsored by 
+    CTec Security Solutions, <a href="http://www.commguard.com/">http://www.commguard.com/</a>.
+    </p>
+    <p>
+    EJBCA 3.3 and later contains support for LunaHSM (SafeNet). The development of this functionality was sponsored 
+    by Atos Worldline <a href="http://www.atosworldline.com/index_FR.htm">http://www.atosworldline.com/index_FR.htm</a> and done with 
+    the support of Linagora <a href="http://www.linagora.com">http://www.linagora.com</a>.
+    </p>
+    <p>
+    New features in EJBCA 3.3 such as Internal RA Approval and Subject Directory Attributes was sponsored by 
+    Simetri Yazilim A.S., <a href="http://www.simetri.com/">http://www.simetri.com/</a>.
+    </p>
+    <p>
+    New features in EJBCA 3.4 such as CMP, XKMS, services framework and much more was sponsored by 
+    GIE Cartes Bancaires and Linagora.
+    </p>
+    <p>
+    The Marlin Trust Management Organization (MTMO) will be using EJBCA to provide key management services for the commercial 
+    adoption of Marlin DRM. EJBCA 3.4.0 supports RSA and ECC implementations of the Marlin PKI infrastructure.
+    <br/>
+    ECC implementation and other improvements were implemented with the support of the MTMO.
+    </p>
+    <p>
+    EJBCA 3.5 contains generic PKCS#11 interface to HSMs, supporting among others the Utimaco CryptoServer. 
+    This development was sponsored by <a href="http://www.utimaco.com/">Utimaco</a>.
+    </p>
+    <p>
+    New in the HSM support is the <a href="http://www.aepnetworks.com/">AEP</a> Keyper HSM. 
+    </p>
+    <p>
+    EJBCA 3.7 contains support for CVC CAs used for EU EAC ePassports. 
+    This development was sponsored and contributed by the <a href="http://www.polisen.se/">Swedish National Police Board</a>.
+    </p>
+    <p>
+    EJBCA 3.10 contains an enrollment Web GUI for the External RA. 
+    This development was sponsored by <a href="http://www.apnic.net/">APNIC</a>.
+    </p>
+</section>
+</body>
+</document>
+

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="EJBCA" href="http://ejbca.sourceforge.net/">
+
+    <title>EJBCA - Open Source PKI Certificate Authority</title>
+    <!--logo href="images/ant_logo_large.gif">EJBCA - The J2EE Certificate Authority</logo-->
+
+    <body>
+       <menusection name="Home" index="0"         href="/index.html">
+            <menu name="EJBCA">
+                <item name="Home"               href="/index.html"/>
+                <item name="Features"              href="/features.html"/>
+                <item name="Screenshots"           href="/screenshots.html"/>
+                <item name="Demo Certificate"	   href="/demo.html"/>
+                <item name="License"               href="/license.html"/>
+                <item name="Contact &amp; Support" href="/contact.html"/>
+                <item name="Credits"               href="/credits.html"/>
+                <item name="Reference installations" href="/installations.html"/>
+                <item name="Complementary software"  href="/complementary.html"/>
+                <item name="Sourceforge project" href="http://www.sf.net/projects/ejbca/"/>
+                <item name="Release news"        href="http://sourceforge.net/news/?group_id=39716"/>
+            </menu>
+
+            <menu name="Download">
+                <item name="Latest releases" href="/download.html"/>
+            </menu>
+
+            <menu name="EJBCA PKI Docs">
+                <item name="Architecture"	  href="/architecture.html"/>
+                <item name="Installation"	  href="/installation.html"/>
+                <item name="Concepts"	  	  href="/concepts.html"/>
+                <item name="Admin Guide"	  href="/adminguide.html"/>
+                <item name="User Guide"		  href="/userguide.html"/>
+            </menu>
+
+            <menu name="Validation Authority (VA)">
+                <item name="VA Services"		  href="/services-va.html"/>
+                <item name="Standalone VA Installation"	  href="/installation-va.html"/>
+            </menu>
+
+            <menu name="EJBCA OCSP Docs">
+                <item name="OCSP Architecture"	  href="/architecture-ocsp.html"/>
+                <item name="OCSP Installation"	  href="/installation-ocsp.html"/>
+                <item name="OCSP User Guide"	  href="/userguide-ocsp.html"/>
+            </menu>
+
+            <menu name="Other documentation">
+                <item name="FAQ"		  href="/faq.html"/>
+                <item name="Wiki"   href="http://wiki.ejbca.org/"/>
+                <item name="Guides"                href="/guides.html"/>
+                <item name="Security"		  href="/security.html"/>
+                <item name="Changelog"            href="http://jira.primekey.se/browse/ECA?report=com.atlassian.jira.plugin.system.project:changelog-panel"/>
+                <item name="References"           href="/references.html"/>
+                <item name="Release cycle"        href="/releasecycle.html"/>
+                <item name="Database schema"      href="http://www.ejbca.org/library/index.html"/>
+                <item name="Blog"      href="http://blog.ejbca.org/"/>
+            </menu>
+
+            <menu name="Older releases">
+                <item name="Older releases"     href="http://ejbca.org/older_releases/"/>
+            </menu>
+
+            <menu name="Contributing">
+                <item name="Contribute to EJBCA"     href="/contributions.html"/>
+                <item name="Contributors"          href="/contributors.html"/>
+                <item name="Bug Database"          href="http://jira.primekey.se/"/>
+                <item name="SVN Repository"      href="/repository.html"/>
+                <item name="FishEye SVN" href="http://fisheye.primekey.se/changelog/EJBCA/"/>
+            </menu>
+
+            <menu name="Donate">
+                <item name="Donate to EJBCA"     href="/donations.html"/>
+            </menu>
+
+            <menu name="Continous integration">
+                <item name="Hudson" href="/hudson.html"/>
+                <item name="FishEye" href="/fisheye.html"/>
+            </menu>
+
+        </menusection>
+
+    </body>
+</project>

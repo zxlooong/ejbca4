@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="ejbca-entity" default="build">
+    <description>
+            Contains all JPA entity classes.
+    </description>
+
+	<dirname property="this.dir" file="${ant.file.ejbca-entity}"/>
+	<import file="${this.dir}/../build.xml"/>
+	
+	<property name="build.dir" location="${this.dir}/build"/>
+	<property name="build-va.dir" location="${this.dir}/build-va"/>
+	<property name="build-test.dir" location="${this.dir}/build-test"/>
+	<property name="reports.base.dir" location="${this.dir}/build-test/reports/"/>
+	<property name="src.dir" location="${this.dir}/src"/>
+	<property name="src-test.dir" location="${this.dir}/src-test"/>
+	<property name="resources.dir" location="${this.dir}/resources"/>
+
+	<path id="common-compile.classpath">
+		<path refid="lib.utils.classpath"/>
+		<path refid="lib.jpa.classpath"/>
+		<path refid="lib.bouncycastle.classpath"/>
+	</path>
+
+	<path id="compile.classpath">
+		<path refid="common-compile.classpath"/>
+		<path refid="lib.ejbca-util.classpath"/>
+	</path>
+
+	<path id="va-compile.classpath">
+		<path refid="common-compile.classpath"/>
+		<path refid="lib.cert-cvc.classpath"/>
+		<path refid="lib.log4j.classpath"/>
+		<path refid="lib.ejbca-util.classpath"/>
+	</path>
+
+	<path id="compile-test.classpath">
+		<path refid="compile.classpath"/>
+		<path location="${build.dir}"/>
+		<path refid="lib.junit.classpath"/>
+	</path>
+	
+	<path id="jdbc-jars.classpath">
+		<fileset dir="${jdbc.driver.dir}" includes="*.jar"/>
+	</path>
+
+	<path id="test.classpath-nojdbc">
+		<path refid="compile.classpath"/>
+		<path refid="lib.batik.classpath"/>	<!-- we only need xerces -->
+		<path location="${build-test.dir}"/>
+		<path location="${mod.ejbca-entity.lib}"/>
+		<path refid="lib.junit.classpath"/>
+	</path>
+
+	<path id="test.classpath">
+		<path refid="test.classpath"/>
+		<path refid="jdbc-jars.classpath"/>
+	</path>
+
+	<path id="generate.classpath">
+		<path refid="compile.classpath"/>
+		<path refid="lib.batik.classpath"/>	<!-- we only need xerces -->
+		<path location="${build-test.dir}"/>
+		<path location="${build.dir}"/>
+	</path>
+
+    <target name="clean" description="Clean up this module">
+		<delete dir="${build.dir}" />
+		<delete dir="${build-va.dir}" />
+		<delete dir="${build-test.dir}" />
+		<delete file="${mod.ejbca-entity.lib}" />
+		<delete file="${mod.va-entity.lib}" />
+    </target>
+	
+    <target name="build" description="Build this module" depends="compile, handlepersistence, handleorm">
+    	<jar destfile="${mod.ejbca-entity.lib}" basedir="${build.dir}" includes="**/*.class **/*.xml" excludes="org/ejbca/util/DatabaseSchemaScriptCreator.class"/>
+    </target>
+
+    <target name="build-va" description="Build this module" depends="compile-va, handlepersistence, handleorm-ocsp">
+    	<jar destfile="${mod.va-entity.lib}" basedir="${build-va.dir}" includes="**/*.class **/*.xml"/>
+    </target>
+
+    <target name="handlepersistence">
+    	<!-- Specify JTA lookup if Weblogic -->
+    	<condition property="persistence.enable-weblogic-jta-lookup1" value="-->"><equals arg1="${appserver.type}" arg2="weblogic"/></condition>
+    	<condition property="persistence.enable-weblogic-jta-lookup2" value="&lt;!--"><equals arg1="${appserver.type}" arg2="weblogic"/></condition>
+    	<condition property="persistence.enable-websphere-jta-lookup1" value="-->"><equals arg1="${appserver.type}" arg2="websphere"/></condition>
+    	<condition property="persistence.enable-websphere-jta-lookup2" value="&lt;!--"><equals arg1="${appserver.type}" arg2="websphere"/></condition>
+    	<mkdir dir="${build.dir}/META-INF"/>
+    	<mkdir dir="${build-va.dir}/META-INF"/>
+    	<copy file="${resources.dir}/persistence-ds-template.xml" tofile="${build.dir}/META-INF/persistence.xml" failonerror="true" overwrite="true">
+    		<filterchain>
+				<expandproperties/>
+    		</filterchain>
+    	</copy>
+    	<copy file="${resources.dir}/persistence-ds-template.xml" tofile="${build-va.dir}/META-INF/persistence.xml" failonerror="true" overwrite="true">
+    		<filterchain>
+				<expandproperties/>
+    		</filterchain>
+    	</copy>
+    	<mkdir dir="${build-test.dir}/META-INF" />
+    	<copy file="${resources.dir}/persistence-test-template.xml" tofile="${build-test.dir}/META-INF/persistence.xml" failonerror="true" overwrite="true">
+    		<filterchain>
+				<expandproperties/>
+    		</filterchain>
+    	</copy>
+    </target>
+
+    <target name="handleorm">
+		<copy file="${resources.dir}/orm-ejbca-${database.name}.xml" tofile="${build.dir}/META-INF/orm.xml" failonerror="true" overwrite="true"/>
+		<copy file="${resources.dir}/orm-ejbca-${database.name}.xml" tofile="${build-test.dir}/META-INF/orm.xml" failonerror="true" overwrite="true"/>
+	</target>
+
+    <target name="handleorm-ocsp">
+		<copy file="${resources.dir}/orm-ocsp-${database.name}.xml" tofile="${build-va.dir}/META-INF/orm.xml" failonerror="true" overwrite="true"/>
+	</target>
+
+    <target name="compile-external-deps" unless="external-deps-satfisfied"><antcall target="ejbca-util"/></target>
+	
+    <target name="compile" depends="with.clover, compile-external-deps">
+    	<mkdir dir="${build.dir}" />
+        <javac srcdir="${src.dir}" destdir="${build.dir}" debug="on" includeantruntime="no"
+        	encoding="iso8859-1" target="${java.target.version}" classpathref="compile.classpath"/>
+    </target>
+
+    <target name="compile-va" depends="with.clover">
+    	<mkdir dir="${build-va.dir}" />
+        <javac destdir="${build-va.dir}" debug="on" includeantruntime="no"
+        	encoding="iso8859-1" target="${java.target.version}" classpathref="va-compile.classpath">
+        	<include name="org/ejbca/core/ejb/ca/store/CertificateData.java"/>
+        	<include name="org/ejbca/core/ejb/ca/store/CRLData.java"/>
+        	<src path="${src.dir}"/>
+        </javac>
+    </target>
+
+    <target name="test-dbschema" description="Perform database schema validation." depends="compile-test, handlepersistence, handleorm">
+    	<fail unless="jdbc.driver.dir" message="Use -Djdbc.driver.dir=/path-to-jdbc-jars/ to specify the directory with the JDBC driver JARs."/>
+		<available property="database.driver.available" classname="${database.driver}" classpathref="jdbc-jars.classpath"/>
+    	<fail unless="database.driver.available" message="Driver class (${database.driver}) from database.properties can not be found in ${jdbc.driver.dir}."/>
+        <copy file="${resources.dir}/log4j.xml" tofile="${build-test.dir}/log4j.xml" />
+    	<mkdir dir="${build-test.dir}/META-INF"/>
+		<copy file="${resources.dir}/orm-ejbca-${database.name}.xml" tofile="${build-test.dir}/META-INF/orm.xml" failonerror="true" overwrite="true"/>
+    	<property name="reports.dir" location="${reports.base.dir}/dbschema"/>
+		<delete dir="${reports.dir}" />
+		<mkdir dir="${reports.dir}/html"/>
+		<junit printsummary="yes" haltonfailure="no" fork="false" failureproperty="databaseschemarest.failed">
+			<classpath>
+        		<path refid="test.classpath"/>
+				<pathelement path="${clover.jar}"/>
+				<pathelement location="${build-test.dir}"/>
+			</classpath>
+			<formatter type="xml" />
+			<test name="org.ejbca.core.ejb.DatabaseSchemaTest" todir="${reports.dir}"/>
+			<!-- batchtest seems to be unable to accept memory arguments..
+			<batchtest fork="yes" todir="${reports.dir}">
+				<fileset dir="${build-test.dir}">
+					<include name="org/ejbca/core/ejb/DatabaseSchemaTest.class" />
+				</fileset>
+			</batchtest>
+			-->
+		</junit>
+		<antcall target="createreport"/>
+    	<condition property="databaseschemarest.ok" value="true"><not><isset property="databaseschemarest.failed"/></not></condition>
+    	<echounlesstrue unless-true="databaseschemarest.ok" message="If your test runs our of memory (for example during the CRL write), you might want to consider using ANT_OPTS like '-Xms1024m -Xmx2048m'." />
+    </target>
+
+	<target name="test" depends="compile-test" description="Run tests for this module">
+    	<antcall target="showtime"/>
+    	<property name="reports.dir" location="${reports.base.dir}/test"/>
+		<delete dir="${reports.dir}" />
+		<mkdir dir="${reports.dir}/html"/>
+		<echo message=" ** Running stand-alone tests. **"/>
+		<junit printsummary="yes" haltonfailure="no" dir="${this.dir}">
+			<classpath>
+	    		<path refid="test.classpath-nojdbc"/>
+				<pathelement path="${clover.jar}"/>
+			</classpath>
+			<formatter type="xml" />
+			<batchtest fork="yes" todir="${reports.dir}">
+				<fileset dir="${build-test.dir}" includes="org/ejbca/util/**/*Test.class" excludes=""/>
+			</batchtest>
+		</junit>
+		<antcall target="createreport"/>
+    	<antcall target="showtime"/>
+    </target>
+
+    <target name="compile-test" depends="with.clover, ejbca-util, build">
+    	<mkdir dir="${build-test.dir}" />
+        <javac srcdir="${src-test.dir}" destdir="${build-test.dir}" debug="on" includeantruntime="no"
+        	encoding="iso8859-1" target="${java.target.version}" classpathref="compile-test.classpath"/>
+		<copy todir="${build-test.dir}" failonerror="true">
+			<fileset dir="${src-test.dir}">
+				<include name="**/*.xml"/>
+			</fileset>
+		</copy>
+    </target>
+
+    <target name="generate-dbscripts" description="Generate create and drop script for the configured database." depends="compile-test, handlepersistence">
+        <copy file="${resources.dir}/log4j.xml" tofile="${build-test.dir}/log4j.xml" />
+    	<mkdir dir="${build-test.dir}/META-INF"/>
+		<copy file="${resources.dir}/orm-ejbca-${database.name}.xml" tofile="${build-test.dir}/META-INF/orm.xml" failonerror="true" overwrite="true"/>
+    	<mkdir dir="${ejbca.home}/dist"/>
+		<java classname="org.ejbca.util.DatabaseSchemaScriptCreator" classpathref="generate.classpath" args="${ejbca.home}/doc/sql-scripts ${database.name}"/>
+    </target>
+
+	<target name="runone" depends="compile-test">
+		<fail message="'test.runone' is not set. Example -Dtest.runone=ApprovalExecutorUtilTest" unless="test.runone" />
+        <copy file="${log4j.test.file}" tofile="${build-test.dir}/log4j.xml" failonerror="true"/>
+    	<property name="reports.dir" location="${reports.base.dir}/runone"/>
+		<delete dir="${reports.dir}" />
+		<mkdir dir="${reports.dir}/html"/>
+		<junit printsummary="yes" haltonfailure="no" >
+			<classpath>
+        		<path refid="test.classpath-nojdbc"/>
+				<pathelement path="${clover.jar}"/>
+			</classpath>
+			<formatter type="xml" />
+			<batchtest fork="yes" todir="${reports.dir}">
+				<fileset dir="${build-test.dir}">
+					<include name="**/${test.runone}.class" />
+				</fileset>
+			</batchtest>
+		</junit>
+		<antcall target="createreport"/>
+	</target>
+
+</project>

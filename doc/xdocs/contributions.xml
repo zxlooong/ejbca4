@@ -1,0 +1,86 @@
+<?xml version="1.0"?>
+<document>
+
+  <properties>
+    <title>Contribute to EJBCA</title>
+  </properties>
+
+<body>
+  <section name="Contributions">
+    <p>
+    EJBCA is an open source project and appreciates community contributions:
+    <ul>
+    <li>Contribute code - we love patches! If you have a new feature or bug-fix, this is the absolute fastest way get it implemented.<br/>
+        A well written feature or bug-fix with proper JUnit tests have a very high probability of living on,
+        thus removing the maintenance burden of patching EJBCA every time you upgrade.</li>
+    <li>Contribute documentation. Documentation can always be improved.</li>
+    <li>Contribute translations. Translations can always be improved.</li>
+    <li>Report bugs, suggest new features and improvements. You can do it all through the <a href="http://jira.primekey.se/">Bug Database</a>.</li>
+    <li>Join the EJBCA Team!</li>
+    <li>Due to Common Criteria certification we can not be very generous with SVN commit access. We may get SVN access if you prove yourself, have long-term intentions and sign of on our Development Policy.</li>
+    </ul>
+    See <a href="contact.html">contact &amp; support</a> for ways to contact the EJBCA Team.
+    </p>  
+    <p>
+    The <a href="http://wiki.ejbca.org/developers">EJBCA Wiki</a> have all the information you need to get started developing EJBCA.
+    </p>
+  </section>
+
+  <section name="Donations">
+    <p>
+    You can donate to EJBCA in a number of ways:
+    <ul>
+    <li>By purchasing an Enterprise Support contract. We have ready-made support programs for you. Contact the project admins at <a href="contact.html">contact &amp; support</a>, or see <a href="http://www.primekey.se/">www.primekey.se</a>.</li>
+    <li>By hiring us for integration, or sponsoring development of new features. Contact the project admins at <a href="contact.html">contact &amp; support</a>.</li>
+    <li>Through <a href="donations.html">Donations</a>.</li>
+    </ul>
+    </p>
+  </section>
+
+  <section name="Commit privileges policy">
+	<p>The purpose of the commit privileges policy is to maintain assurance that unauthorized modifications are not being done.</p>
+	<p>The policy for determining who have commit rights to the repositories are:</p>
+	<ul>
+	<li>Only trusted staff or partners who are active in development have commit right to the repository.</li> 
+	<li>All persons have previously undergone code review of their work, to ensure they produce good code.</li>
+	<li>After 6 months without repository activity, commit privileges will be withdrawn. To be added again if needed.</li>
+	<li>All commits are monitored in irc-channel, fisheye, release diffs and using a QA review process.</li>
+    </ul>
+  </section>
+  
+  <section name="Contributor security policy">
+  <p>
+  EJBCA is a security project, under Common Criteria evaluation. As such a few security policies are needed.
+  In order for any contributor to get source code repository commit access the contributor must agree on some security policies.
+  Contributors with no commit access are not bothered by this policy.
+  </p>
+  <subsection name="Password usage">
+  <p>Passwords used need to comply with the following requirements:
+  </p>
+  <ul>
+	  <li>Have 8 or more characters.</li>
+	  <li>Include letters, numbers and special characters.</li>
+  </ul>
+  </subsection>
+  <subsection name="Workstation protection">
+  <p>The user is responsible for protecting the development workstation according to best practices and best effort. 
+  This includes, but is not limited to, firewalls, virus and malware protection. 
+  </p>
+  </subsection>
+  <subsection name="User responsibilities">
+  <p>This policy applies to all users who are given physical and/or logical access to servers.
+  </p>
+  <p>Once a server account has been assigned, the user is then responsible for ensuring the adherence to all policies and guidelines. 
+	Account information must not be shared, distributed or exchanged with anyone other than the person to whom the information was assigned. This includes, but is not limited to, usernames, user IDs, passwords, IP addresses, network diagrams or any other information which may jeopardize the security of the servers. 
+	The user is responsible for informing the management within 24 hours if:
+  </p> 
+  <ul>
+	  <li>His account information has been compromised.</li>
+	  <li>His computer has been infected by a virus, or other malware.</li>  
+  </ul>
+  </subsection>
+  </section>
+  
+</body>
+</document>
+

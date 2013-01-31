@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="build-helpers" >
+    <description>
+            This file contains common helper targets and is included from build.xml
+    </description>
+
+	<target name="showtime" >
+		<tstamp>
+			<format property="currenttime" pattern="yyyy-MM-dd HH:mm:ss Z"/>
+		</tstamp>
+		<echo message="Current time is ${currenttime}."/>
+	</target>
+
+	<target name="createreport">
+		<fail message="'reports.dir' is not set." unless="reports.dir" />
+		<junitreport todir="${reports.dir}">
+			<fileset dir="${reports.dir}">
+				<include name="TEST-*.xml" />
+			</fileset>
+			<report format="frames" todir="${reports.dir}/html" />
+		</junitreport>
+    	<echo message=""/>
+    	<echo message="Results are available in file://${reports.dir}/html/index.html"/>
+	</target>
+</project>

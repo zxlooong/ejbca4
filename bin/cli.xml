@@ -1,0 +1,198 @@
+<project name="cli" default="ejbca:install" basedir="." xmlns:ejbca="ejbca">
+
+	<fail unless="ejbca.home" message="This ant script cannot be run stand-alone.."/>
+
+<!--
+    This is a transcript of the install.sh content to avoid platform specific problems
+    Hopefully this will simplify maintenance and deployment but it needs more work.
+-->
+
+	<target name="check:bootstrapdone">
+        <available file="${ejbca.home}/dist/ejbca.ear" property="bootstrap.done"/>
+        <fail unless="bootstrap.done" message="Missing EJBCA_HOME/dist/ejbca.ear. You must do 'ant bootstrap' to build the ejbca.ear file." />
+	</target>
+	
+    <!-- ======================================================================= -->
+    <!-- Promts for passwords required at deployment                             -->
+	<!-- Note: This code is duplicated in build.xml								 -->
+    <!-- ======================================================================= -->
+	<target name="ejbca:deploytrustprompt">
+		<input message="Please enter the password of the truststore with the CA certificate for https?" addproperty="java.trustpassword" defaultvalue="changeit">
+			<handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+		</input>
+	</target>
+	<target name="ejbca:deployprompt" depends="ejbca:deploytrustprompt">
+		<input message="Please enter the password of the keystore with the TLS key for https" addproperty="httpsserver.password" defaultvalue="serverpwd">
+			<handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+		</input>
+	</target>
+
+    <target name="ejbca:prompt">
+        <input message="Please enter the CA name (default: AdminCA1) ?" addproperty="ca.name" defaultvalue="AdminCA1"/>
+        <input message="Please enter the CA dn (default: CN=AdminCA1,O=EJBCA Sample,C=SE) ?" addproperty="ca.dn" defaultvalue="CN=AdminCA1,O=EJBCA Sample,C=SE"/>
+        <input message="Please enter the CA key type (default: RSA) ?" addproperty="ca.keytype" defaultvalue="RSA" />
+        <input message="Please enter the CA key spec (default: 2048) ?" addproperty="ca.keyspec" defaultvalue="2048" />
+        <input message="Please enter the CA signature algorithm (default: SHA1WithRSA) ?" addproperty="ca.signaturealgorithm" defaultvalue="SHA1WithRSA" />
+        <input message="Please enter the CA validity in days (default: 3650) ?" addproperty="ca.validity" defaultvalue="3650"/>
+        <input message="Please enter the CA policy id (default, no policy) ?" addproperty="ca.policy" defaultvalue="null"/>
+        <input message="Please enter the server hostname (default 'localhost') ?" addproperty="httpsserver.hostname" defaultvalue="localhost"/>
+        <input message="Please enter the server dn (default: CN=${httpsserver.hostname},O=EJBCA Sample,C=SE) ?" addproperty="httpsserver.dn" defaultvalue="CN=${httpsserver.hostname},O=EJBCA Sample,C=SE"/>
+        <input message="Please enter the superadmin cn (default: SuperAdmin) ?" addproperty="superadmin.cn" defaultvalue="SuperAdmin"/>
+         <input message="Please enter the superadmin dn (default: CN=${superadmin.cn}) ?" addproperty="superadmin.dn" defaultvalue="CN=${superadmin.cn}"/>
+        <input message="Please enter the if superadmin keystore should be batched (default: true) ?" addproperty="superadmin.batch" defaultvalue="true"/>      
+		<input message="Please enter the superadmin password (default: ejbca) ?" addproperty="superadmin.password" defaultvalue="ejbca">
+			<handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+		</input>
+        <input message="Enter password CA token password: " addproperty="ca.tokenpassword" defaultvalue="null">
+            <handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+        </input> 
+    </target>
+
+    <target name="ejbca:init" depends="ejbca:prompt, ejbca:deployprompt">
+        <echo>
+------------------- CA Properties ----------------
+ca.name                : ${ca.name}
+ca.dn                  : ${ca.dn}
+ca.tokentype           : ${ca.tokentype}
+ca.keytype             : ${ca.keytype}
+ca.keyspec             : ${ca.keyspec}
+ca.signaturealgorithm  : ${ca.signaturealgorithm}
+ca.validity            : ${ca.validity}
+ca.policy              : ${ca.policy}
+ca.tokenproperties     : ${ca.tokenproperties}
+httpsserver.hostname   : ${httpsserver.hostname}
+httpsserver.dn         : ${httpsserver.dn}
+superadmin.cn          : ${superadmin.cn}
+superadmin.dn          : ${superadmin.dn}
+superadmin.batch       : ${superadmin.batch}
+appserver.home         : ${appserver.home}
+        </echo>
+    </target>
+
+	<target name="ejbca:javatruststore" depends="ejbca:deploytrustprompt" description="Java trust store config">
+		<!-- prompt for ca name, but only if it has not been set in install.properties or prompted for already during install -->
+	    <input message="Enter name of CA to add to truststore" addproperty="ca.name"/>
+        <echo message="Getting root certificate in DER format..."/>
+		<ejbca:cli arg="ca getrootcert '${ca.name}' ${java.io.tmpdir}/rootca.der -der"/>
+		<property name="trust.keystore" value="${ejbca.home}/p12/truststore.jks"/>
+		<property name="trust.password" value="${java.trustpassword}"/>
+		<echo>Adding to or creating keystore: ${trust.keystore}</echo>
+		<available file="${trust.keystore}" property="javatruststore.file.present"/>
+        <antcall target="ejbca:javatruststore-removeold"/>
+	    <ejbca:keytool arg="-v -alias '${ca.name}' -import -trustcacerts -file '${java.io.tmpdir}/rootca.der' -keystore '${trust.keystore}' -storepass ${trust.password} -noprompt"/>
+	    <delete file="${java.io.tmpdir}/rootca.der"/>
+	</target>
+
+    <target name="ejbca:javatruststore-removeold" if="javatruststore.file.present">
+	    <ejbca:keytool arg="-v -alias '${ca.name}' -delete -keystore '${trust.keystore}' -storepass ${trust.password}"/>
+    </target>
+	
+    <target name="ejbca:install" depends="check:bootstrapdone, ejbca:init" description="Install">
+        <antcall target="ejbca:initCA" />
+        
+        <antcall target="ejbca:adminweb"/>
+    	<antcall target="ejbca:javatruststore"/>
+    </target>
+
+    <target name="ejbca:initCA" >
+       <echo message="Initializing CA with '${ca.name}' '${ca.dn}' ${ca.tokentype} &lt;ca.tokenpassword hidden&gt; ${ca.keyspec} ${ca.keytype} ${ca.validity} ${ca.policy} ${ca.signaturealgorithm} ${ca.tokenproperties} -superadmincn '${superadmin.cn}'..." />
+        <ejbca:cli-hideargs arg='ca init "${ca.name}" "${ca.dn}" ${ca.tokentype} ${ca.tokenpassword} ${ca.keyspec} ${ca.keytype} ${ca.validity} ${ca.policy} ${ca.signaturealgorithm} ${ca.tokenproperties} -superadmincn "${superadmin.cn}"'/>
+     </target>
+
+	<target name="ejbca:adminweb">
+		<!-- Add an altname of 127.0.0.1 if the httpsservers hostname is localhost -->
+	    <condition property="httpsserver.an" value="IPAddress=127.0.0.1" else="null">
+	        <contains string="${httpsserver.dn}" substring="CN=localhost,"/>
+	    </condition>
+		
+		
+		<ejbca:cli-hideargs arg='ra adduser tomcat ${httpsserver.password} "${httpsserver.dn}" "${httpsserver.an}" "${ca.name}" null 1 JKS SERVER'/>
+		<ejbca:cli-hideargs arg="ra setclearpwd tomcat ${httpsserver.password}"/>
+		<ejbca:cli arg="batch tomcat"/>
+        <condition property="superadmin.keystoretype" value="P12" else="USERGENERATED">
+           	<istrue value="${superadmin.batch}" />
+        </condition>
+		<ejbca:cli-hideargs arg='ra adduser superadmin ${superadmin.password} "${superadmin.dn}" null "${ca.name}" null 1 ${superadmin.keystoretype}'/>
+		<ejbca:cli-hideargs arg="ra setclearpwd superadmin ${superadmin.password}" />
+		
+		<!--
+		this does not work for some reason, if I'm not forking the VM, I'm wondering
+		if it is not an issue with the Ant classloader
+		For in ejbca.home in order to have the p12 directory as a child of it.
+		-->
+		<delete file="${ejbca.home}/p12/superadmin.p12" quiet="true"/>
+        <condition property="superadmin.batch.true" value="set">
+           	<istrue value="${superadmin.batch}" />
+        </condition>
+		<antcall target="ejbca:batchsuperadmin"/>
+		<fail message="Batch generation failed!">
+			<condition>
+				<or>
+					<not><available filepath="${ejbca.home}/p12" file="tomcat.jks"/></not>
+                	<and>
+		            	<not><available filepath="${ejbca.home}/p12" file="superadmin.p12"/></not>
+           				<istrue value="${superadmin.batch}" />
+                	</and>
+				</or>
+			</condition>
+		</fail>
+	</target>
+
+        <target name="ejbca:renew-keystore" description="Renews the keystore used by the application server for https access.">
+                <ejbca:cli-hideargs arg="ra setuserstatus tomcat 10"/>
+                <ejbca:cli-hideargs arg="ra setclearpwd tomcat ${httpsserver.password}"/>
+                <ejbca:cli arg="batch tomcat"/>
+        </target>
+
+	<!-- Only try to batch generate superadmin if if keystoretyp is P12 -->
+	<target name="ejbca:batchsuperadmin" if="superadmin.batch.true">
+		<ejbca:cli arg="batch superadmin"/>
+	</target>
+    
+	<target name="ejbca:cli" description="Handy hook to run a command">
+		<ejbca:cli name="${cli.name}" arg="${cli.args}"/>
+	</target>
+
+    
+    <!--
+    ==============================================================================
+        macro definitions
+    ==============================================================================
+    -->
+    <macrodef name="cli" uri="ejbca">
+        <attribute name="arg"/>
+        <sequential>
+        <echo message="@{arg}"/>
+        <java dir="${ejbca.home}" jar="${ejbca.home}/dist/ejbca-ejb-cli/ejbca-ejb-cli.jar" fork="true">
+            <arg line="@{arg}"/>
+        </java>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="cli-hideargs" uri="ejbca" description="same as 'cli', but does not output the given arguments to console">
+        <attribute name="arg"/>
+        <sequential>
+            <java dir="${ejbca.home}" jar="${ejbca.home}/dist/ejbca-ejb-cli/ejbca-ejb-cli.jar" fork="true">
+                <arg line="@{arg}"/>
+            </java>
+        </sequential>
+    </macrodef>
+
+    <macrodef name="keytool" uri="ejbca">
+        <attribute name="arg"/>
+        <sequential>
+        <condition property="temp.keytoolhome" value="${env.JAVA_HOME}/bin/" else="">
+        	<and>
+            	<isset property="env.JAVA_HOME" />
+	        	<not>
+	        		<equals arg1="${env.JAVA_HOME}" arg2="" />
+	        	</not>
+        	</and>
+        </condition>
+        <exec executable="${temp.keytoolhome}keytool">
+            <arg line="@{arg}"/>
+        </exec>
+        </sequential>
+    </macrodef>
+
+</project>
